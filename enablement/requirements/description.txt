@@ -1,0 +1,18 @@
+[SIMPLE] - Notes Tracker
+
+
+Create a simple tool that helps users manage their personal notes. Users can write a note with a title and content, view all their saved notes, update any note when needed, or delete the ones they no longer want. Each note should display when it was last modified, so users can keep track of updates.
+Functionalities
+
+Add a new note with a title and content
+View a list of all saved notes
+Edit existing notes
+Delete unwanted notes
+Non-functional requirements
+
+Log all user actions (e.g., creating, updating, deleting notes)
+Ensure each feature is covered with at least one unit test
+No need for persistent data storage 
+Technical hints and constraints  
+
+Use an in-memory database 
