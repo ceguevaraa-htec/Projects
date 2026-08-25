@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Edit note</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Edit note</h1>
+    <a class="button" href="/">Back to notes</a>
+  </header>
+
+  <main>
+    <p id="not-found-message" class="error-message" hidden>
+      This note no longer exists.
+    </p>
+    <p id="form-error" class="error-message" hidden></p>
+    <form id="edit-form" novalidate>
+      <label for="title">
+        Title
+        <input type="text" id="title" name="title" />
+      </label>
+      <label for="content">
+        Content
+        <textarea id="content" name="content"></textarea>
+      </label>
+      <button type="submit">Save changes</button>
+    </form>
+  </main>
+
+  <script type="module" src="/js/edit.js"></script>
+</body>
+</html>

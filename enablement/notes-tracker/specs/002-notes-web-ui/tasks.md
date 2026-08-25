@@ -34,8 +34,8 @@ Express app; frontend tests under `tests/unit/frontend/`.
 
 **Purpose**: Directories and the one new dependency this feature needs
 
-- [ ] T001 Create `public/`, `public/js/`, and `tests/unit/frontend/` directories
-- [ ] T002 Add `jsdom` as a dev dependency (`npm install -D jsdom`) for the frontend unit tests
+- [X] T001 Create `public/`, `public/js/`, and `tests/unit/frontend/` directories
+- [X] T002 Add `jsdom` as a dev dependency (`npm install -D jsdom`) for the frontend unit tests
 
 ---
 
@@ -45,25 +45,25 @@ Express app; frontend tests under `tests/unit/frontend/`.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Implement `public/js/api.js`: fetch wrappers `listNotes()`, `getNote(id)`,
+- [X] T003 Implement `public/js/api.js`: fetch wrappers `listNotes()`, `getNote(id)`,
       `createNote({title, content})`, `updateNote(id, changes)`, `deleteNote(id)` against the
       existing REST API (`/notes`), per contracts/pages.md and
       001-notes-crud-service/contracts/notes-api.md — each resolves to the parsed JSON body on
       success or throws an error carrying the response status and server error message on
       failure
-- [ ] T004 [P] Implement `public/js/format.js`: pure `truncateContent(content, maxLength = 100)`
+- [X] T004 [P] Implement `public/js/format.js`: pure `truncateContent(content, maxLength = 100)`
       (appends `…` only when actually cut off) and `formatTimestamp(isoString)` (renders a
       human-readable date/time), per data-model.md
-- [ ] T005 [P] Implement `public/js/validation.js`: pure `validateNoteForm({ title, content },
+- [X] T005 [P] Implement `public/js/validation.js`: pure `validateNoteForm({ title, content },
       { requireBoth })` returning a list of field-level error messages — `requireBoth: true`
       (create) requires both non-empty after trim; `requireBoth: false` (edit) requires at
       least one of the two present and non-empty after trim — per data-model.md and FR-009/
       001-notes-crud-service FR-010
-- [ ] T006 Add `public/styles.css`: one shared, hand-written responsive stylesheet (flexbox/
+- [X] T006 Add `public/styles.css`: one shared, hand-written responsive stylesheet (flexbox/
       grid layout, one media query breakpoint in the ~600–768px range) used by all three pages,
       switching from a wide/multi-column desktop layout to a stacked single-column mobile
       layout, per plan.md and constitution v1.1.0's frontend constraint
-- [ ] T007 Modify `src/app.ts` to serve `public/` as static files (`express.static`), mounted
+- [X] T007 Modify `src/app.ts` to serve `public/` as static files (`express.static`), mounted
       so `/` resolves to `public/index.html`, alongside the existing `/notes` API mount
 
 **Checkpoint**: Foundation ready — page implementation can now begin
@@ -83,11 +83,11 @@ empty-state message appears — per spec.md User Story 1.
 
 > Write these tests FIRST, and confirm they fail before implementing this phase.
 
-- [ ] T008 [P] [US1] Unit tests for `format.js` in `tests/unit/frontend/format.test.ts`:
+- [X] T008 [P] [US1] Unit tests for `format.js` in `tests/unit/frontend/format.test.ts`:
       `truncateContent` leaves content ≤100 chars unchanged (no ellipsis), truncates longer
       content to ~100 chars with a trailing `…`; `formatTimestamp` renders a non-empty
       human-readable string from a sample ISO timestamp
-- [ ] T009 [P] [US1] jsdom tests for list rendering/removal in
+- [X] T009 [P] [US1] jsdom tests for list rendering/removal in
       `tests/unit/frontend/list-dom.test.ts`: a `renderNoteList(notes, container)`-style
       function renders one row per note (title, truncated preview, formatted time) into a
       container element; given an empty array, it renders the "no notes yet" message instead;
@@ -96,9 +96,9 @@ empty-state message appears — per spec.md User Story 1.
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement `public/index.html`: page skeleton with a container element for the
+- [X] T010 [US1] Implement `public/index.html`: page skeleton with a container element for the
       note list/empty-state message and a link to `create.html`, per contracts/pages.md
-- [ ] T011 [US1] Implement `public/js/list.js`: on load, calls `api.js`'s `listNotes()`; on
+- [X] T011 [US1] Implement `public/js/list.js`: on load, calls `api.js`'s `listNotes()`; on
       success renders notes via the render function from T009 (using `format.js`'s
       `truncateContent`/`formatTimestamp`) or the empty-state message for an empty array; on
       failure shows a clear error message; renders, per note, an edit link to
@@ -121,17 +121,17 @@ Story 2.
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T012 [P] [US2] Unit tests for `validation.js` in create mode
+- [X] T012 [P] [US2] Unit tests for `validation.js` in create mode
       (`requireBoth: true`) in `tests/unit/frontend/validation.test.ts`: rejects an empty,
       missing, or whitespace-only title; rejects the same for content; passes when both are
       present and non-empty
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Implement `public/create.html`: a form with a title input, a content
+- [X] T013 [US2] Implement `public/create.html`: a form with a title input, a content
       textarea, a submit control, and an element for inline validation/error messages, per
       contracts/pages.md
-- [ ] T014 [US2] Implement `public/js/create.js`: on submit, calls `validateNoteForm` (T005,
+- [X] T014 [US2] Implement `public/js/create.js`: on submit, calls `validateNoteForm` (T005,
       `requireBoth: true`) — on failure shows the message(s) inline without navigating and
       without clearing the fields; on pass, calls `api.js`'s `createNote()` — on success
       (`201`) redirects to `/`; on a `400`/other failure shows the server's error message
@@ -153,16 +153,16 @@ refreshed last-modified time — per spec.md User Story 3.
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T015 [P] [US3] Unit tests for `validation.js` in edit mode (`requireBoth: false`) in
+- [X] T015 [P] [US3] Unit tests for `validation.js` in edit mode (`requireBoth: false`) in
       `tests/unit/frontend/validation.test.ts`: passes when only title is supplied (and
       non-empty), passes when only content is supplied, rejects when neither is supplied,
       rejects when a supplied field is empty/whitespace-only
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] Implement `public/edit.html`: same form shape as `create.html`, plus an
+- [X] T016 [US3] Implement `public/edit.html`: same form shape as `create.html`, plus an
       element for a "note not found" message, per contracts/pages.md
-- [ ] T017 [US3] Implement `public/js/edit.js`: on load, reads `id` from the URL query string
+- [X] T017 [US3] Implement `public/js/edit.js`: on load, reads `id` from the URL query string
       and calls `api.js`'s `getNote(id)` — on success pre-fills the form; on `404` shows a
       clear "note not found" message instead of a broken form. On submit, calls
       `validateNoteForm` (T005, `requireBoth: false`) — on failure shows inline message(s)
@@ -193,7 +193,7 @@ plan.md's testing-scope decision — no additional jsdom test is added here to a
 
 ### Implementation for User Story 4
 
-- [ ] T018 [US4] Wire delete button click handling into `public/js/list.js`: on click, calls
+- [X] T018 [US4] Wire delete button click handling into `public/js/list.js`: on click, calls
       `confirm()` — cancelled means no action; confirmed calls `api.js`'s `deleteNote(id)` — on
       success (`204`) removes that note's row via the T009 removal function; on `404` shows a
       clear "already deleted" inline message and removes the row anyway; on other failure
@@ -208,15 +208,15 @@ functional.
 
 **Purpose**: Validation spanning all pages, and documentation
 
-- [ ] T019 [P] Verify responsive behavior of `public/styles.css` across `index.html`,
+- [X] T019 [P] Verify responsive behavior of `public/styles.css` across `index.html`,
       `create.html`, and `edit.html` at ~375px and ~1280px+ viewport widths (browser dev tools
       device emulation) — no horizontal scrolling, all controls reachable and legible — per
       FR-013/SC-007
-- [ ] T020 [P] Run every manual scenario in quickstart.md (empty state, create, create
+- [X] T020 [P] Run every manual scenario in quickstart.md (empty state, create, create
       validation, browse populated, edit, edit validation, stale-note edit, delete, stale-note
       delete, responsive check) against the running dev server, confirming behavior matches
       contracts/pages.md
-- [ ] T021 Update `README.md` to document the web UI: how to reach it (`/` after `npm run
+- [X] T021 Update `README.md` to document the web UI: how to reach it (`/` after `npm run
       dev`), what the three pages do, and that it's a thin client over the existing REST API
 
 ---

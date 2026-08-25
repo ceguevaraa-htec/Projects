@@ -27,7 +27,23 @@ npm run dev     # starts the dev server (src/server.ts) with live reload
 npm run build && npm start   # compiled build
 ```
 
-The server listens on `PORT` (default `3000`).
+The server listens on `PORT` (default `3000`). Open `http://localhost:$PORT/` in a browser for
+the web UI, or use the REST API directly (see Endpoints below).
+
+## Web UI
+
+A plain HTML/CSS/vanilla JS multi-page UI, served as static files from `public/` by the same
+Express app — no build step, no frontend framework. See
+[specs/002-notes-web-ui/](specs/002-notes-web-ui/) for the full spec, plan, and page contract.
+
+| Page | Path | Does |
+|---|---|---|
+| List | `/` | Shows every note (title, content preview, last-modified time); links to create/edit; delete button |
+| Create | `/create.html` | Form to add a new note; returns to the list on success |
+| Edit | `/edit.html?id=<id>` | Pre-filled form to change a note's title/content; returns to the list on success |
+
+It's a thin client over the REST API below — it introduces no new backend behavior. Deleting a
+note removes its row from the page directly, without a full reload.
 
 ## Test
 
