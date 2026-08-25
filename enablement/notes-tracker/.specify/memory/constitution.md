@@ -1,20 +1,23 @@
 <!--
 Sync Impact Report
-Version change: (template) → 1.0.0
-Modified principles: n/a (initial ratification, no prior named principles)
-Added principles:
-  - I. Layered Architecture
-  - II. Test-First Development
-  - III. Observability via Structured Logging
-  - IV. Simplicity & Minimal Dependencies
-Added sections:
-  - Technology Constraints (replaces [SECTION_2_NAME])
-  - Development Workflow (replaces [SECTION_3_NAME])
-  - Governance
+Version change: 1.0.0 → 1.1.0
+Modified principles: none redefined — IV. Simplicity & Minimal Dependencies gained a
+  clarifying note extending its existing minimal-dependency philosophy to an optional
+  frontend (no new normative rule, no removal)
+Added principles: none
+Added sections: none (no new top-level section — amendment expands Technology Constraints)
+Modified sections:
+  - Technology Constraints: added an optional-frontend bullet (plain HTML/CSS/vanilla JS,
+    no framework/bundler, responsive layout required); reworded the "UX/UI consistency"
+    out-of-scope item to "Visual design polish beyond basic usability and responsiveness"
+    to avoid contradicting the new responsiveness requirement
 Removed sections: none
 Deferred / TODO placeholders: none — all template tokens resolved
 Templates requiring follow-up: none (plan/spec/tasks templates are consumed at runtime and
   already reference "Constitution Check" generically; no edits made per scope guard)
+Rationale for MINOR bump: adds scope (an optional frontend technology constraint) without
+  removing or redefining any existing principle — matches the versioning policy's MINOR case
+  ("a new principle or materially expanded guidance added").
 -->
 
 # Notes Tracker Constitution
@@ -61,7 +64,9 @@ factories, generic frameworks) MUST NOT be introduced ahead of an actual second 
 ("no premature abstraction"). When in doubt, prefer the simplest implementation that satisfies
 the other principles. Rationale: this is a learning/practice project — its value is in
 demonstrating clean layering, testing discipline, and observability, not feature breadth or
-production hardening.
+production hardening. If a frontend is added, it follows this same minimal-dependency
+philosophy: no frontend framework and no CSS framework/library (e.g. no Bootstrap/Tailwind) —
+hand-written responsive CSS only (see Technology Constraints).
 
 ## Technology Constraints
 
@@ -69,10 +74,18 @@ production hardening.
 - **HTTP layer**: Express, used only for routing and request/response handling.
 - **Testing**: Vitest for all unit tests.
 - **Storage**: in-memory only (e.g. a `Map`); no database, no persistence across restarts.
+- **Frontend (optional)**: plain HTML, CSS, and vanilla JavaScript only, served as static files
+  by the existing Express app (or a separate lightweight static server). No frontend framework
+  (React, Vue, etc.), no build step/bundler beyond what's needed to serve static files. The UI
+  MUST be responsive: usable and legible on both mobile-width (~375px) and desktop-width
+  (~1280px+) viewports, using CSS (e.g. flexbox/grid and media queries) rather than a fixed
+  desktop-only layout.
 - **Explicitly out of scope**: authentication/authorization, security hardening, performance or
-  scalability requirements, UX/UI consistency, deployment or infrastructure practices. These MUST
-  NOT be added as requirements to specs or plans for this project unless this constitution is
-  amended first.
+  scalability requirements, visual design polish beyond basic usability and responsiveness (a
+  design system, animations, accessibility auditing, and branding are not requirements;
+  responsive layout across mobile and desktop viewports IS a requirement per the frontend bullet
+  above), deployment or infrastructure practices. These MUST NOT be added as requirements to
+  specs or plans for this project unless this constitution is amended first.
 
 ## Development Workflow
 
@@ -102,4 +115,4 @@ production hardening.
   storage mechanism, or skips a required test or log entry MUST be checked against this
   constitution before being accepted; unresolved conflicts block completion of the feature.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-23 | **Last Amended**: 2026-08-23
+**Version**: 1.1.0 | **Ratified**: 2026-08-23 | **Last Amended**: 2026-08-25
