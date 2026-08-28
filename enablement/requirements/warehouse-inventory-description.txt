@@ -1,0 +1,21 @@
+[MEDIUM] - Warehouse Inventory System
+
+
+Build an inventory management tool designed to help retail stores and warehouses keep track of their products. Users can organize items into categories like Beverages, Snacks, or Household, view product details, and easily update quantities when stock changes. The system ensures stock never falls below zero and records every inventory adjustment, giving users a full history of stock changes. The system should support sorting and filtering options, making finding specific products quick and easy. Users can also see an overview of total products available by category.
+
+Functionalities
+
+Add, update, and remove product information
+View detailed product information including name, price, and code
+Sort and filter product listings
+Increase or decrease stock quantities
+Prevent stock from going below zero
+Display total stock per category
+Show a history of all inventory changes
+Non-functional requirements
+
+Unit test coverage of at least 70%
+Implement global error catching with appropriate error logging
+Technical hints and constraints
+
+Use a lightweight relational database that can run locally (e.g. SQLite)
