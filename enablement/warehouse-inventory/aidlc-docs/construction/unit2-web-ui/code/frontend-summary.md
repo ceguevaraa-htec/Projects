@@ -23,3 +23,12 @@
 
 ## Known Limitation
 No automated browser-based UI test (e.g. Playwright/Puppeteer driving the actual DOM) was run — this wasn't in scope, since Unit 2 never went through NFR Requirements (which is where a JS testing-framework choice would have been made) per the approved execution plan. The `data-testid` attributes are in place specifically so such tests could be added later without relying on brittle selectors.
+
+## Post-Delivery Bug Fix: Category Picker Not Refreshed on Create/Rename
+**Reported**: the product-creation category dropdown appeared empty even after categories had been created.
+
+**Root cause** (confirmed via a real headless-browser reproduction, not just code review): `categories.js`'s `handleCreateCategory` and `handleRenameCategory` only called `refreshCategories()` (which repopulates the Categories tab's own table) — never `refreshCategoryPicker()` (which populates the Products tab's category `<select>`). Only `handleDeleteCategory` happened to call both. Since `refreshCategoryPicker()` otherwise only runs once, at page load, any category created or renamed *after* the page loaded never appeared in the product-creation picker.
+
+**Fix**: both `handleCreateCategory` and `handleRenameCategory` now also call `refreshCategoryPicker()` after a successful mutation, matching the pattern `handleDeleteCategory` already used.
+
+**Verification**: this exact limitation of the earlier "no automated browser test" note turned out to matter — a curl-based check couldn't have caught this, since it's a pure DOM/JS-state bug with no visible API-level symptom. Installed `puppeteer` temporarily, reproduced the bug against a clean database (0 options in the dropdown after create), applied the fix, re-verified against another clean database (1 option, correctly labeled) — then removed `puppeteer`/`node_modules`/`package.json` again, since adopting a permanent JS test framework was never an approved NFR Requirements decision for this unit. Backend's 64-test suite re-run and still passing (94% coverage, unaffected — this was a frontend-only fix).

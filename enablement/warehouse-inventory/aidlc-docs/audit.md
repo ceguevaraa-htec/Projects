@@ -396,3 +396,21 @@ Technical hint: use a lightweight relational database that can run locally (e.g.
 **User Input**: "I am getting an error when I tried the steps in backend/Readme the error was when I tried uvicorn app.main:app --reload --app-dir backend"
 **AI Response**: "Reproduced the exact error rather than guessing: booted uvicorn from inside backend/ (where the README's Setup section leaves the user) using the Run section's literal command including --app-dir backend. Got ModuleNotFoundError: No module named 'app' - confirmed root cause: --app-dir backend was only correct if run from the workspace root, but Setup already cd's into backend/, making the two sections inconsistent. Fixed README.md's Run section to drop --app-dir backend (redundant/wrong from within backend/) and clarified the working directory in prose. Re-verified: booted successfully, GET / returned 200."
 **Context**: Post-delivery bug fix, found via reproduction not speculation
+
+---
+
+## New AI-DLC Invocation: Bug Fix Request
+**Timestamp**: 2026-08-30T13:00:00Z
+**User Input**: "Using AI-DLC, fix a bug: When I want to create a product it looks like the category dropdown is empty even when I have created categories in advance"
+**AI Response**: "Re-invoking AI-DLC for a new work item within the existing project. Workspace Detection: existing code found (brownfield=true), but this session already produced comprehensive design documentation (application-design.md, functional-design docs for both units) during the original build - treating these as equivalent to Reverse Engineering artifacts rather than re-deriving them from scratch, since they were authored with full knowledge of the actual code and remain current (no drift - this is the same session). Proceeding to diagnose the reported bug before Requirements Analysis, since root cause will determine whether this is a trivial isolated fix (likely skip User Stories/Application Design/Units Generation per their skip criteria) or something larger."
+**Context**: Workspace Detection - brownfield, reusing existing design docs, proceeding to diagnosis
+
+---
+
+## Bug Fix - Diagnosed, Fixed, and Verified via Real Browser
+**Timestamp**: 2026-08-30T13:15:00Z
+**User Input**: (same as above - category dropdown empty bug report)
+**AI Response**: "Diagnosed via code reading: categories.js's handleCreateCategory and handleRenameCategory only called refreshCategories() (Categories tab's own table), never refreshCategoryPicker() (Products tab's select) - only handleDeleteCategory called both. Classified as an isolated, well-scoped bug fix - skipped User Stories/Application Design/Units Generation/NFR stages per their own skip criteria, proceeding directly to fix. Installed puppeteer temporarily to reproduce with a REAL browser rather than guessing: confirmed 0 options in the dropdown after creating a category on a clean DB. Applied the fix (call refreshCategoryPicker() after create and rename, mirroring the existing delete handler). Re-ran the identical repro script against another clean DB: confirmed 1 correctly-labeled option now appears. Removed puppeteer/node_modules/package.json afterward - adopting a permanent JS test framework was never an approved NFR Requirements decision for this unit, so this was treated as temporary diagnostic tooling, not a lasting addition. Re-ran backend's full test suite (64 passed, 94% coverage, unaffected - frontend-only fix) and frontend syntax check (all 4 JS files pass). Updated unit2-web-ui/code/frontend-summary.md with full root-cause/fix/verification detail."
+**Context**: Adaptive AI-DLC bug-fix path - INCEPTION stages skipped per their skip criteria (isolated bug, no new business logic/data model), root cause confirmed via genuine reproduction (not speculation), fix verified via genuine re-reproduction (not just re-reading the code)
+
+---

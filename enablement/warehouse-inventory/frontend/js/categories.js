@@ -80,6 +80,13 @@ async function handleCreateCategory(event) {
     await createCategory(input.value);
     input.value = "";
     await refreshCategories();
+    // Bug fix: the Products tab's category picker was only ever populated
+    // once at page load, so a category created afterward never appeared
+    // there until something else (e.g. a delete) happened to refresh it.
+    // Keep the picker in sync on every category mutation, not just delete.
+    if (typeof refreshCategoryPicker === "function") {
+      await refreshCategoryPicker();
+    }
   } catch (err) {
     showCategoryMessage(err.message);
   } finally {
@@ -92,6 +99,11 @@ async function handleRenameCategory(categoryId, newName) {
   try {
     await renameCategory(categoryId, newName);
     await refreshCategories();
+    // Same bug fix as handleCreateCategory above — a rename also changes
+    // what the picker's option labels should show.
+    if (typeof refreshCategoryPicker === "function") {
+      await refreshCategoryPicker();
+    }
   } catch (err) {
     showCategoryMessage(err.message);
   }
