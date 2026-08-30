@@ -1,0 +1,37 @@
+[MEDIUM] - Shopping Cart with a Simple Payment Gateway
+
+
+Build a backend API for managing advanced shopping cart integrated with a simple, mocked payment gateway.
+The system will be built using a relation database to persist cart and payment data, supporting all major and advanced cart operations, and advanced features such as filtering, paging, and searching products and payment transactions.
+
+Furthermore, a database seed will be provided for easy setup and testing.
+
+The payment gateway will simulate a payment process using mocked endpoints. The mock payment system will provide basic operations like payment submission and status retrieval, without integrating any real payment providers.
+
+When a user starts shopping, a cart is created, and products can be added to the cart with a specific quantity. If the product already exists in the cart, the quantity is updated.
+
+During checkout, the system calculates the final total of the card, including any discounts.
+
+A payment request is made via the mocked payment gateway using mocked endpoints. The gateway either approves or declines the transaction. If the payment is approved, the cart status is changed to “Paid”. If the payment is declined, the cart is marked as “Failed”.
+
+Functionalities:
+
+Shopping Cart API:
+
+Add, update, and remove shopping cart items.
+Retrieve current cart contents.
+Set status to Paid/Failed.
+Cart Checkout
+Mock Payment API:
+
+Submit mock payment request on cart checkout
+Input: mock payment details
+Output: Payment success/failure status
+Non-functional requirements:
+
+Log all major activities.
+Implement unit tests for all major components.
+Implement global error-handling.
+Technical constraints:
+
+Use a lightweight relational database that can run locally (e.g. SQLite)
