@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Warehouse Inventory</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Warehouse Inventory</h1>
+    <nav>
+      <button id="tab-categories" data-testid="nav-tab-categories" class="tab active">Categories</button>
+      <button id="tab-products" data-testid="nav-tab-products" class="tab">Products</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ================= Categories Section (UI-1) ================= -->
+    <section id="categories-section">
+      <h2>Categories</h2>
+
+      <form id="category-create-form" data-testid="category-create-form">
+        <input
+          type="text"
+          id="category-create-name"
+          data-testid="category-create-name-input"
+          placeholder="Category name"
+          required
+        />
+        <button type="submit" id="category-create-submit-button" data-testid="category-create-form-submit-button">
+          Create Category
+        </button>
+      </form>
+
+      <div id="category-form-error" class="message" hidden></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Total Stock</th>
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="category-list-body" data-testid="category-list"></tbody>
+      </table>
+    </section>
+
+    <!-- ================= Products Section (UI-2, UI-3, UI-4) ================= -->
+    <section id="products-section" hidden>
+      <h2>Products</h2>
+
+      <div class="filter-bar" data-testid="product-filter-bar">
+        <label>
+          Category:
+          <select id="product-filter-category" data-testid="product-filter-bar-category-select"></select>
+        </label>
+        <label>
+          Sort by:
+          <select id="product-filter-sort-by" data-testid="product-filter-bar-sort-select">
+            <option value="name">Name</option>
+            <option value="price">Price</option>
+            <option value="quantity">Quantity</option>
+          </select>
+        </label>
+        <label>
+          Direction:
+          <select id="product-filter-sort-dir">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </label>
+      </div>
+
+      <form id="product-create-form" data-testid="product-create-form">
+        <input type="text" id="product-create-name" placeholder="Name" required />
+        <input type="number" id="product-create-price" placeholder="Price" step="0.01" min="0" required />
+        <input type="text" id="product-create-code" placeholder="Code" required />
+        <select id="product-create-category" required></select>
+        <input
+          type="number"
+          id="product-create-initial-stock"
+          placeholder="Initial stock"
+          step="1"
+          min="0"
+          value="0"
+        />
+        <button type="submit" id="product-create-submit-button" data-testid="product-create-form-submit-button">
+          Create Product
+        </button>
+        <button type="button" id="product-create-cancel-button" hidden>Cancel</button>
+      </form>
+
+      <div id="product-form-error" class="message" hidden></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Code</th>
+            <th>Quantity</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="product-list-body" data-testid="product-list"></tbody>
+      </table>
+
+      <!-- Stock adjustment form (UI-3) -->
+      <section id="stock-adjustment-form-section" hidden>
+        <h3>Adjust Stock</h3>
+        <form id="stock-adjustment-form" data-testid="stock-adjustment-form">
+          <input
+            type="number"
+            id="stock-adjustment-delta"
+            placeholder="Amount (+ to increase, - to decrease)"
+            step="1"
+            required
+          />
+          <button type="submit" id="stock-adjustment-form-submit-button" data-testid="stock-adjustment-form-submit-button">
+            Submit
+          </button>
+          <button type="button" id="stock-adjustment-cancel-button">Cancel</button>
+        </form>
+        <div id="stock-adjustment-error" class="message" hidden></div>
+      </section>
+
+      <!-- History view (part of UI-4) -->
+      <section id="history-view-section" hidden>
+        <h3>Stock Adjustment History</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Delta</th>
+              <th>Resulting Balance</th>
+            </tr>
+          </thead>
+          <tbody id="history-view-body"></tbody>
+        </table>
+        <button type="button" id="history-view-close-button">Close</button>
+      </section>
+    </section>
+  </main>
+
+  <script src="js/api-client.js"></script>
+  <script src="js/categories.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/stock.js"></script>
+  <script>
+    function switchTab(tab) {
+      const isCategories = tab === "categories";
+      document.getElementById("categories-section").hidden = !isCategories;
+      document.getElementById("products-section").hidden = isCategories;
+      document.getElementById("tab-categories").classList.toggle("active", isCategories);
+      document.getElementById("tab-products").classList.toggle("active", !isCategories);
+    }
+
+    document.getElementById("tab-categories").addEventListener("click", () => switchTab("categories"));
+    document.getElementById("tab-products").addEventListener("click", () => switchTab("products"));
+
+    initCategoriesSection();
+    initProductsSection();
+    initStockSection();
+  </script>
+</body>
+</html>

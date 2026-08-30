@@ -5,11 +5,11 @@
 - [x] Step B: Confirm greenfield code organization / directory structure — **`backend/` and `frontend/` top-level directories** (Q2: A)
 - [x] Step C: Confirm API-contract sharing approach between units — **FastAPI auto-generated OpenAPI schema** as source of truth (Q3: A)
 - [x] Step D: Confirm test organization per unit — **per-unit `tests/` with unit + integration split for backend, smoke-test pass for frontend** (Q4: A)
-- [ ] Step E: Generate `unit-of-work.md` (unit definitions, responsibilities, code organization)
-- [ ] Step F: Generate `unit-of-work-dependency.md` (dependency matrix)
-- [ ] Step G: Generate `unit-of-work-story-map.md` (story → unit mapping, all 16 stories assigned)
-- [ ] Step H: Validate unit boundaries and dependencies against application-design.md
-- [ ] Step I: Confirm every story in stories.md is assigned to a unit
+- [x] Step E: Generate `unit-of-work.md` (unit definitions, responsibilities, code organization)
+- [x] Step F: Generate `unit-of-work-dependency.md` (dependency matrix)
+- [x] Step G: Generate `unit-of-work-story-map.md` (story → unit mapping, all 16 stories assigned)
+- [x] Step H: Validate unit boundaries and dependencies against application-design.md
+- [x] Step I: Confirm every story in stories.md is assigned to a unit (12 + 4 = 16, 0 unassigned)
 
 ## Category Coverage Notes
 - **Team Alignment**: Not applicable — single-developer/agent implementation, no team-ownership boundaries to negotiate. No question asked for this category.
