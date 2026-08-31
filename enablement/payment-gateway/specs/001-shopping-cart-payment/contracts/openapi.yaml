@@ -1,0 +1,356 @@
+openapi: 3.0.3
+info:
+  title: Shopping Cart & Mock Payment Gateway API
+  version: "1.0.0"
+  description: >
+    REST API for anonymous-session shopping carts, product catalog browsing, checkout,
+    and a mocked payment gateway. See specs/001-shopping-cart-payment/spec.md for the
+    functional requirements this contract implements.
+servers:
+  - url: /api/v1
+
+paths:
+  /products:
+    get:
+      summary: List products (filter, search, page)
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: q
+          in: query
+          description: Search term matched against product name (FR-010)
+          schema: { type: string }
+        - name: category
+          in: query
+          description: Filter by category (FR-009)
+          schema: { type: string }
+        - name: minPrice
+          in: query
+          description: Minimum price in cents (FR-009)
+          schema: { type: integer, minimum: 0 }
+        - name: maxPrice
+          in: query
+          description: Maximum price in cents (FR-009)
+          schema: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Paged product list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedProducts'
+        '400':
+          $ref: '#/components/responses/Error'
+
+  /products/{productId}:
+    get:
+      summary: Get a single product
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/Error'
+
+  /carts:
+    post:
+      summary: Start shopping — create a new cart (FR-001)
+      tags: [Carts]
+      responses:
+        '201':
+          description: Cart created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+
+  /carts/{cartId}:
+    get:
+      summary: Retrieve current cart contents (FR-006)
+      tags: [Carts]
+      parameters:
+        - $ref: '#/components/parameters/CartId'
+      responses:
+        '200':
+          description: Cart contents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '404':
+          $ref: '#/components/responses/Error'
+
+  /carts/{cartId}/items:
+    post:
+      summary: Add a product to the cart (merges quantity if already present) (FR-002, FR-003)
+      tags: [Carts]
+      parameters:
+        - $ref: '#/components/parameters/CartId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+      responses:
+        '200':
+          description: Updated cart contents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Invalid quantity (<= 0) (FR-007)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/Error'
+
+  /carts/{cartId}/items/{itemId}:
+    patch:
+      summary: Update a line item's quantity (FR-004)
+      tags: [Carts]
+      parameters:
+        - $ref: '#/components/parameters/CartId'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCartItemRequest'
+      responses:
+        '200':
+          description: Updated cart contents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+    delete:
+      summary: Remove a line item from the cart (FR-005)
+      tags: [Carts]
+      parameters:
+        - $ref: '#/components/parameters/CartId'
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Updated cart contents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '404':
+          $ref: '#/components/responses/Error'
+
+  /carts/{cartId}/checkout:
+    post:
+      summary: >
+        Checkout: compute total (with optional promo code), submit payment to the mock
+        gateway, and update cart status to Paid/Failed (FR-012–FR-017)
+      tags: [Carts]
+      parameters:
+        - $ref: '#/components/parameters/CartId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: Checkout completed (approved or declined) — see transaction for outcome
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Empty cart, invalid promo code, or already-final cart status (FR-016, FR-017, FR-025)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/Error'
+
+  /transactions/{transactionId}:
+    get:
+      summary: Retrieve a past transaction by id (FR-019)
+      tags: [Transactions]
+      parameters:
+        - $ref: '#/components/parameters/TransactionId'
+      responses:
+        '200':
+          description: Transaction found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '404':
+          $ref: '#/components/responses/Error'
+
+  /transactions:
+    get:
+      summary: Search/page through transaction history (FR-020)
+      tags: [Transactions]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          description: Filter by outcome
+          schema: { type: string, enum: [APPROVED, DECLINED] }
+        - name: cartId
+          in: query
+          description: Filter by originating cart/session
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paged transaction list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedTransactions'
+
+components:
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: 1-indexed page number (constitution Principle IV convention)
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    CartId:
+      name: cartId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TransactionId:
+      name: transactionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    Error:
+      description: Error response (centralized error handler shape — constitution Principle II)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [statusCode, errorCode, message, requestId]
+      properties:
+        statusCode: { type: integer, example: 404 }
+        errorCode: { type: string, example: CART_NOT_FOUND }
+        message: { type: string, example: "Cart not found" }
+        requestId: { type: string, format: uuid }
+
+    Product:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        category: { type: string }
+        priceCents: { type: integer }
+        description: { type: string, nullable: true }
+
+    PagedProducts:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Product' }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+
+    CartItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        productName: { type: string }
+        quantity: { type: integer }
+        unitPriceCents: { type: integer }
+        lineTotalCents: { type: integer }
+
+    Cart:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [OPEN, PAID, FAILED] }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartItem' }
+        subtotalCents: { type: integer }
+        discountCents: { type: integer, nullable: true }
+        totalCents: { type: integer, nullable: true }
+
+    AddCartItemRequest:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1 }
+
+    UpdateCartItemRequest:
+      type: object
+      required: [quantity]
+      properties:
+        quantity: { type: integer, minimum: 1 }
+
+    CheckoutRequest:
+      type: object
+      properties:
+        promoCode:
+          type: string
+          nullable: true
+          description: Optional coupon code (FR-025)
+
+    Transaction:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        cartId: { type: string, format: uuid }
+        status: { type: string, enum: [APPROVED, DECLINED] }
+        totalCents: { type: integer }
+        discountCents: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    PagedTransactions:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Transaction' }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }

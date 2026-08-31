@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  category    String
+  priceCents  Int
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cartItems CartItem[]
+
+  @@index([category])
+  @@index([name])
+}
+
+model Cart {
+  id             String   @id @default(uuid())
+  status         String   @default("OPEN") // OPEN, PAID, FAILED
+  promoCodeId    String?
+  discountCents  Int?
+  totalCents     Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  items        CartItem[]
+  transactions Transaction[]
+  promoCode    PromoCode?    @relation(fields: [promoCodeId], references: [id])
+
+  @@index([status])
+}
+
+model CartItem {
+  id             String   @id @default(uuid())
+  cartId         String
+  productId      String
+  quantity       Int
+  unitPriceCents Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+}
+
+model Transaction {
+  id                String   @id @default(uuid())
+  cartId            String
+  status            String // APPROVED, DECLINED
+  totalCents        Int
+  discountCents     Int
+  promoCodeId       String?
+  gatewayReference  String
+  createdAt         DateTime @default(now())
+
+  cart      Cart       @relation(fields: [cartId], references: [id])
+  promoCode PromoCode? @relation(fields: [promoCodeId], references: [id])
+
+  @@index([status])
+  @@index([cartId])
+}
+
+model PromoCode {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  discountType  String // PERCENT, FIXED
+  discountValue Int
+  active        Boolean   @default(true)
+  expiresAt     DateTime?
+
+  carts        Cart[]
+  transactions Transaction[]
+}
