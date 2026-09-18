@@ -1,0 +1,13 @@
+# HTEC kit tooling (commands/templates only — no project artifacts live here,
+# confirmed via create-brief.md: its output goes to /specs, not into htec-kit/)
+htec-kit/
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/*
+!.vscode/settings.json
+
+# Language/stack-specific entries go here once /speckit.plan picks the tech stack
+# (e.g. node_modules/, __pycache__/, .venv/, *.pyc, dist/, .env)

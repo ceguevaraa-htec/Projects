@@ -1,0 +1,23 @@
+Team Allocation Platform
+
+Design a platform to help organizations plan and manage how employees are assigned to projects over time. Managers can easily track who is working on what, in which role, and for how long. The system helps identify available team members based on their skills and roles, avoids overbooking by ensuring no one is assigned more than 100% of their capacity, and prevents scheduling conflicts across projects. It also provides real-time and forward-looking views of unassigned staff to support better resource planning. Users can browse, search, and filter employees, projects, and skill sets, and generate PDF reports showing team allocations and utilization. Create simple UI that shows list of employees with their current utilizations and projects.
+
+Functionalities
+
+Create and manage employees with name, employment dates, roles, and skills
+Create and manage projects with start/end dates and required roles with capacity
+Assign employees to projects while respecting availability and skill match
+Prevent overlapping or over-capacity assignments
+View current and future underutilized employees ("bench")
+Filter, search, and sort employees, projects, and skills
+Generate downloadable PDF reports of allocations
+UI page that shows employees with their current allocations
+Non-functional requirements
+
+Unit test coverage above 70%, including edge cases (e.g., over-assignment)
+Integration tests using a real database, with cleanup after each run
+Track and log execution time for each request
+Standalone module should be responsible for generating and inserting realistic synthetic data into the database upon initialization or upon request. The module should create data that reflects a wide range of real-world scenarios to support testing, demoing, and development activities
+Technical hints and constraints
+
+Use a local-deployable relational database (e.g. SQLite)
