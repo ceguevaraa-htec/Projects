@@ -390,4 +390,29 @@ describe("OpenAPI conformance — Bench & Reporting endpoints", () => {
     expect(Object.keys(res.body).sort()).toEqual(["error_code", "message"].sort());
     expect(res.body.error_code).toBe("NOT_FOUND");
   });
+
+  it("GET /employees/{employeeId}/my-assignments returns 200 with the MyAssignmentsResponse shape", async () => {
+    const employee = await request(app).post("/employees").send({
+      name: "Katherine Johnson",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+
+    const res = await request(app)
+      .get(`/employees/${employee.body.employeeId}/my-assignments`)
+      .send();
+
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body).sort()).toEqual(
+      ["employeeId", "name", "currentUtilizationPercent", "assignments"].sort(),
+    );
+    expect(Array.isArray(res.body.assignments)).toBe(true);
+  });
+
+  it("GET /employees/{employeeId}/my-assignments for a nonexistent id returns 404 with the ErrorResponse shape", async () => {
+    const res = await request(app).get("/employees/does-not-exist/my-assignments").send();
+    expect(res.status).toBe(404);
+    expect(Object.keys(res.body).sort()).toEqual(["error_code", "message"].sort());
+    expect(res.body.error_code).toBe("NOT_FOUND");
+  });
 });

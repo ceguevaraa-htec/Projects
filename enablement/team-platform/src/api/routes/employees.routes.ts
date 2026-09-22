@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { EmployeeService } from "../../domain/employee.service.js";
 import type { AssignmentService } from "../../domain/assignment.service.js";
+import type { SelfServiceService } from "../../domain/self-service.service.js";
 import type { EmployeeListFilters, Proficiency, Seniority } from "../../domain/types.js";
 import { asyncHandler } from "../async-handler.js";
 
@@ -12,10 +13,14 @@ import { asyncHandler } from "../async-handler.js";
  * hardcoded to 0/[] as they were in EPIC-0001 (see that epic's data-model.md, now resolved).
  * `currentProjectNames` remains [] — it was never flagged as a tracked forward-reference and is
  * out of this epic's scope.
+ *
+ * As of EPIC-0005, `/my-assignments` composes via `SelfServiceService`, not directly — the route
+ * performs no composition or error construction itself (research.md's Principle II decision).
  */
 export function createEmployeesRouter(
   service: EmployeeService,
   assignmentService: AssignmentService,
+  selfServiceService: SelfServiceService,
 ): Router {
   const router = Router();
 
@@ -74,6 +79,14 @@ export function createEmployeesRouter(
         skills,
         assignments,
       });
+    }),
+  );
+
+  router.get(
+    "/:employeeId/my-assignments",
+    asyncHandler(async (req, res) => {
+      const data = await selfServiceService.getMyAssignments(req.params.employeeId);
+      res.status(200).json(data);
     }),
   );
 

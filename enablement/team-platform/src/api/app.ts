@@ -11,6 +11,7 @@ import { ProjectService } from "../domain/project.service.js";
 import { AssignmentService } from "../domain/assignment.service.js";
 import { BenchService } from "../domain/bench.service.js";
 import { ReportsService } from "../domain/reports.service.js";
+import { SelfServiceService } from "../domain/self-service.service.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { createEmployeesRouter } from "./routes/employees.routes.js";
@@ -46,13 +47,17 @@ export function createApp(db: Kysely<Database>): Express {
     assignmentRepository,
     assignmentService,
   );
+  const selfServiceService = new SelfServiceService(employeeRepository, assignmentService);
 
   const app = express();
 
   app.use(express.json());
   app.use(requestLogger);
 
-  app.use("/employees", createEmployeesRouter(employeeService, assignmentService));
+  app.use(
+    "/employees",
+    createEmployeesRouter(employeeService, assignmentService, selfServiceService),
+  );
   app.use("/employees", createEmployeeSkillsRouter(employeeService));
   app.use("/skills", createSkillsRouter(skillService));
   app.use("/projects", createProjectsRouter(projectService));
