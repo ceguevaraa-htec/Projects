@@ -16,9 +16,8 @@ export interface EmployeeRepository {
   findAll(filters: EmployeeListFilters): Promise<EmployeeRecord[]>;
   delete(employeeId: string): Promise<void>;
   /**
-   * Interim EPIC-0001-only stub: the `assignments` table does not exist until EPIC-0003
-   * (Assignment Engine), so this always returns false. MUST become a real existence query
-   * once that table exists — see data-model.md's flagged cross-epic follow-up and tasks.md T044.
+   * Real existence query as of EPIC-0003 (see specs/001-employee-management/data-model.md,
+   * now resolved, and specs/003-assignment-engine/tasks.md T036).
    */
   hasAnyAssignments(employeeId: string): Promise<boolean>;
 }
@@ -128,7 +127,12 @@ export class KyselyEmployeeRepository implements EmployeeRepository {
     await this.db.deleteFrom("employees").where("id", "=", employeeId).execute();
   }
 
-  async hasAnyAssignments(_employeeId: string): Promise<boolean> {
-    return false;
+  async hasAnyAssignments(employeeId: string): Promise<boolean> {
+    const row = await this.db
+      .selectFrom("assignments")
+      .select("id")
+      .where("employee_id", "=", employeeId)
+      .executeTakeFirst();
+    return row !== undefined;
   }
 }

@@ -33,15 +33,13 @@ reference it (past, current, or future), checked explicitly in Domain Logic
 (`project.service.ts`) rather than relying solely on a database constraint, so a clear
 `ProjectHasAssignmentsError` can be raised instead of a raw SQLite error.
 
-> **⚠️ Cross-epic follow-up required (interim behavior, not a permanent design):** As of
-> EPIC-0002, the `assignments` table does not exist yet (owned by EPIC-0003), so
-> `hasAnyAssignments(projectId)` hardcodes a return of `false` — mirroring EPIC-0001's identical
-> `Employee.hasAnyAssignments` stub exactly. This means FR-0012's actual delete protection is a
-> no-op until EPIC-0003's schema exists. Once EPIC-0003's `assignments` table exists, this MUST
-> become a real existence query; otherwise projects with real assignment history could be
-> deleted with no protection at all. **This must be raised explicitly during EPIC-0003's own
-> planning, alongside the identical EPIC-0001 follow-up for `Employee.hasAnyAssignments` — both
-> stubs should be resolved together, since they are the same pattern applied to two tables.**
+> **✅ RESOLVED by EPIC-0003.** As of EPIC-0002, the `assignments` table did not exist yet, so
+> `hasAnyAssignments(projectId)` hardcoded a return of `false`, mirroring EPIC-0001's identical
+> stub. EPIC-0003 (Assignment Engine) discharged this follow-up in its task T039:
+> `project.repository.ts`'s `hasAnyAssignments` now runs a real existence query against the
+> `assignments` table (`assignments.project_id`, a stored column — no join through
+> `project_roles` was needed after all, per `specs/003-assignment-engine/data-model.md`). See
+> `specs/003-assignment-engine/tasks.md` T039 for the resolving change.
 
 ## ProjectRole
 
@@ -84,10 +82,11 @@ Represents a functional role a project needs staffed. Corresponds to OpenAPI sch
 reference it, checked explicitly in Domain Logic, raising `ProjectRoleHasAssignmentsError`
 otherwise.
 
-> **⚠️ Cross-epic follow-up required (interim behavior, not a permanent design):** Identical in
-> nature to the `Project.hasAnyAssignments` stub above — `roleHasAnyAssignments(roleId)`
-> hardcodes `false` until EPIC-0003's `assignments` table exists. Same required follow-up
-> applies.
+> **✅ RESOLVED by EPIC-0003.** Identical in nature to the `Project.hasAnyAssignments` stub
+> above. EPIC-0003 discharged this follow-up in its task T040:
+> `project.repository.ts`'s `roleHasAnyAssignments` now runs a real existence query against the
+> `assignments` table (`assignments.project_role_id`). See
+> `specs/003-assignment-engine/tasks.md` T040 for the resolving change.
 
 ## Skill (reused from EPIC-0001, not redefined)
 

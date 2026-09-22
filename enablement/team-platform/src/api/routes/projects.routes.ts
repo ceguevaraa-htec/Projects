@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { ProjectService } from "../../domain/project.service.js";
+import type { AssignmentService } from "../../domain/assignment.service.js";
 import type { ProjectListFilters, ProjectRoleRecord, ProjectStatus } from "../../domain/types.js";
 import { asyncHandler } from "../async-handler.js";
 
@@ -107,6 +108,25 @@ export function createProjectsRouter(service: ProjectService): Router {
     asyncHandler(async (req, res) => {
       await service.removeProjectRole(req.params.projectId, req.params.roleId);
       res.status(204).send();
+    }),
+  );
+
+  return router;
+}
+
+/**
+ * Separate router for the candidates endpoint (EPIC-0003), mounted alongside
+ * createProjectsRouter's output in app.ts. Kept as its own factory (rather than adding an
+ * AssignmentService parameter to createProjectsRouter) since it depends on a different service.
+ */
+export function createProjectRoleCandidatesRouter(service: AssignmentService): Router {
+  const router = Router();
+
+  router.get(
+    "/:projectId/roles/:roleId/candidates",
+    asyncHandler(async (req, res) => {
+      const candidates = await service.listCandidates(req.params.projectId, req.params.roleId);
+      res.status(200).json(candidates);
     }),
   );
 

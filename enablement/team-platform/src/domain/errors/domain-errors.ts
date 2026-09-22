@@ -123,3 +123,54 @@ export class ProjectNotEditableError extends DomainError {
     );
   }
 }
+
+export class AssignmentNotFoundError extends DomainError {
+  readonly errorCode = "NOT_FOUND";
+  readonly httpStatus = 404;
+
+  constructor(assignmentId: string) {
+    super(`Assignment "${assignmentId}" does not exist.`);
+  }
+}
+
+export class CapacityExceededError extends DomainError {
+  readonly errorCode = "CAPACITY_EXCEEDED";
+  readonly httpStatus = 409;
+
+  constructor(employeeId: string, wouldBePercent: number) {
+    super(
+      `This assignment would put employee "${employeeId}" at ${wouldBePercent}% capacity — the maximum is 100%.`,
+    );
+  }
+}
+
+export class ProjectNotActiveError extends DomainError {
+  readonly errorCode = "PROJECT_NOT_ACTIVE";
+  readonly httpStatus = 409;
+
+  constructor(projectId: string) {
+    super(
+      `Project "${projectId}" isn't Active — assignments can only be made against Active projects.`,
+    );
+  }
+}
+
+export class AssignmentNotEditableError extends DomainError {
+  readonly errorCode = "ASSIGNMENT_NOT_EDITABLE";
+  readonly httpStatus = 409;
+
+  constructor(assignmentId: string) {
+    super(`Assignment "${assignmentId}" has already started and can no longer be edited.`);
+  }
+}
+
+export class AssignmentNotCancellableError extends DomainError {
+  readonly errorCode = "ASSIGNMENT_NOT_CANCELLABLE";
+  readonly httpStatus = 409;
+
+  constructor(assignmentId: string) {
+    super(
+      `Assignment "${assignmentId}" has already started and can't be deleted — its history is preserved.`,
+    );
+  }
+}

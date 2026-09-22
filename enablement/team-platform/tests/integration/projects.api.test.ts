@@ -121,4 +121,43 @@ describe("Projects API (integration)", () => {
     expect(res.status).toBe(409);
     expect(res.body.error_code).toBe("PROJECT_NOT_EDITABLE");
   });
+
+  it("blocks deleting a project or removing a role with a real assignment (EPIC-0003 discharge of T033)", async () => {
+    const employee = await request(app).post("/employees").send({
+      name: "Margaret Hamilton",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+    const project = await request(app).post("/projects").send({
+      name: "Onboard Guidance Software",
+      startDate: "2024-01-01",
+      endDate: "2024-12-31",
+    });
+    const projectId = project.body.projectId as string;
+    await request(app).patch(`/projects/${projectId}`).send({ status: "Active" });
+    const role = await request(app)
+      .post(`/projects/${projectId}/roles`)
+      .send({ name: "Software Engineer", capacityPercent: 100 });
+    const roleId = role.body.roleId as string;
+
+    const today = new Date().toISOString().slice(0, 10);
+    await request(app).post("/assignments").send({
+      employeeId: employee.body.employeeId,
+      projectId,
+      roleId,
+      capacityPercent: 50,
+      startDate: today,
+      endDate: today,
+    });
+
+    const removeRoleRes = await request(app)
+      .delete(`/projects/${projectId}/roles/${roleId}`)
+      .send();
+    expect(removeRoleRes.status).toBe(409);
+    expect(removeRoleRes.body.error_code).toBe("ROLE_HAS_ASSIGNMENTS");
+
+    const deleteProjectRes = await request(app).delete(`/projects/${projectId}`).send();
+    expect(deleteProjectRes.status).toBe(409);
+    expect(deleteProjectRes.body.error_code).toBe("PROJECT_HAS_ASSIGNMENTS");
+  });
 });

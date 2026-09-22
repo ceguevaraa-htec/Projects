@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import type { EmployeeRepository } from "../../src/repositories/employee.repository.js";
 import type { SkillRepository } from "../../src/repositories/skill.repository.js";
 import type { ProjectRepository } from "../../src/repositories/project.repository.js";
+import type { AssignmentRepository } from "../../src/repositories/assignment.repository.js";
 import type {
+  AssignmentCreateInput,
+  AssignmentRecord,
+  AssignmentUpdateInput,
   EmployeeCreateInput,
   EmployeeListFilters,
   EmployeeRecord,
@@ -18,6 +22,7 @@ import type {
   ProjectUpdateInput,
   SkillRecord,
 } from "../../src/domain/types.js";
+import { includesToday, isInFuture } from "../../src/domain/date-utils.js";
 
 /**
  * In-memory test double for EmployeeRepository, used by Domain Logic unit tests so they don't
@@ -262,5 +267,88 @@ export class FakeProjectRepository implements ProjectRepository {
 
   async roleHasAnyAssignments(roleId: string): Promise<boolean> {
     return this.assignmentsByRoleId.has(roleId);
+  }
+}
+
+/**
+ * In-memory test double for AssignmentRepository, used by assignment.service.test.ts. Exposes
+ * `seed` to insert a record directly (e.g., a past-dated assignment) without going through the
+ * normal `insert` flow, since Domain Logic's own creation rules would otherwise be bypassed by
+ * definition when testing edit/cancel against an already-started assignment.
+ */
+export class FakeAssignmentRepository implements AssignmentRepository {
+  private readonly rows = new Map<string, AssignmentRecord>();
+
+  private computeTemporalStatus(
+    startDate: string,
+    endDate: string,
+  ): AssignmentRecord["temporalStatus"] {
+    if (isInFuture(startDate)) return "future";
+    if (includesToday({ start: startDate, end: endDate })) return "current";
+    return "past";
+  }
+
+  seed(
+    record: Omit<AssignmentRecord, "assignmentId" | "temporalStatus"> & { assignmentId?: string },
+  ): AssignmentRecord {
+    const full: AssignmentRecord = {
+      assignmentId: record.assignmentId ?? randomUUID(),
+      employeeId: record.employeeId,
+      employeeName: record.employeeName,
+      projectId: record.projectId,
+      projectName: record.projectName,
+      roleId: record.roleId,
+      roleName: record.roleName,
+      capacityPercent: record.capacityPercent,
+      startDate: record.startDate,
+      endDate: record.endDate,
+      temporalStatus: this.computeTemporalStatus(record.startDate, record.endDate),
+    };
+    this.rows.set(full.assignmentId, full);
+    return full;
+  }
+
+  async insert(input: AssignmentCreateInput): Promise<AssignmentRecord> {
+    return this.seed({
+      employeeId: input.employeeId,
+      employeeName: "",
+      projectId: input.projectId,
+      projectName: "",
+      roleId: input.roleId,
+      roleName: "",
+      capacityPercent: input.capacityPercent,
+      startDate: input.startDate,
+      endDate: input.endDate,
+    });
+  }
+
+  async update(
+    assignmentId: string,
+    input: AssignmentUpdateInput,
+  ): Promise<AssignmentRecord | undefined> {
+    const existing = this.rows.get(assignmentId);
+    if (!existing) return undefined;
+    const updated: AssignmentRecord = {
+      ...existing,
+      ...(input.roleId !== undefined ? { roleId: input.roleId } : {}),
+      ...(input.capacityPercent !== undefined ? { capacityPercent: input.capacityPercent } : {}),
+      ...(input.startDate !== undefined ? { startDate: input.startDate } : {}),
+      ...(input.endDate !== undefined ? { endDate: input.endDate } : {}),
+    };
+    updated.temporalStatus = this.computeTemporalStatus(updated.startDate, updated.endDate);
+    this.rows.set(assignmentId, updated);
+    return updated;
+  }
+
+  async findById(assignmentId: string): Promise<AssignmentRecord | undefined> {
+    return this.rows.get(assignmentId);
+  }
+
+  async findAllForEmployee(employeeId: string): Promise<AssignmentRecord[]> {
+    return [...this.rows.values()].filter((r) => r.employeeId === employeeId);
+  }
+
+  async delete(assignmentId: string): Promise<void> {
+    this.rows.delete(assignmentId);
   }
 }

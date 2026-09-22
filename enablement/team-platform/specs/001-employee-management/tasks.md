@@ -301,6 +301,8 @@ functionally complete.
       rather than merely a display count, an overlooked stub here is a data-integrity risk (an
       employee with real assignment history could be deleted with no error), not just a cosmetic
       inaccuracy.
+      **✅ Follow-up resolved by EPIC-0003 task T036** (`specs/003-assignment-engine/tasks.md`)
+      — `hasAnyAssignments` now runs a real existence query against the `assignments` table.
 
 ---
 

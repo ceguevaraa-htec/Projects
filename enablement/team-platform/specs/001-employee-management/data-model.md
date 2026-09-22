@@ -17,7 +17,7 @@ Represents a staff member. Corresponds to OpenAPI schemas `Employee` (detail, wi
 | `employmentStartDate` | date | Required (FR-0001). |
 | `employmentEndDate` | date, nullable | Optional/open-ended (FR-0001). |
 | `seniority` | enum: Junior / Mid / Senior | Required (FR-0001). |
-| `currentUtilizationPercent` | integer 0–100 | Derived/computed field, not stored directly by this epic — sourced from the Assignment Engine epic once it exists; for this epic in isolation, always 0 (no assignments can exist yet without that epic). |
+| `currentUtilizationPercent` | integer 0–100 | Derived/computed field, not stored. **✅ RESOLVED by EPIC-0003**: `employees.routes.ts` now computes this via the shared `AssignmentService.getCurrentUtilization(employeeId)` (previously hardcoded to `0` — see `specs/003-assignment-engine/tasks.md` T043). |
 
 **Validation rules**:
 - `name`, `employmentStartDate`, `seniority` required on create (FR-0001).
@@ -36,19 +36,14 @@ not a database-level foreign-key `ON DELETE RESTRICT` alone — Domain Logic per
 existence check explicitly so it can raise `EmployeeHasAssignmentsError` with a clear message,
 rather than surfacing a raw SQLite constraint violation.
 
-> **⚠️ Cross-epic follow-up required (interim behavior, not a permanent design):** As of
-> EPIC-0001, the `assignments` table does not exist yet (it is owned by EPIC-0003, the
-> Assignment Engine), so the repository's `hasAnyAssignments(employeeId)` check hardcodes a
-> return of `false` — i.e., every employee currently appears deletion-eligible. This is an
-> interim fallback specific to implementing EPIC-0001 before EPIC-0003 lands — it is **not** a
-> permanent design decision, and unlike the `affectedProjectRoleCount` fallback above, it is not
-> merely a display inaccuracy: it means FR-0003's actual delete protection is a no-op until
-> EPIC-0003's schema exists. Once EPIC-0003's `assignments` table exists, `hasAnyAssignments`
-> MUST be changed to a real existence query against it; otherwise employees with real assignment
-> history could be deleted with no protection at all, silently violating FR-0003 and corrupting
-> any data EPIC-0003 depends on. **This must be raised explicitly during EPIC-0003's own planning
-> (`/speckit.plan` for Assignment Engine) as a required change to this epic's
-> `employee.repository.ts`, not assumed to be already handled.**
+> **✅ RESOLVED by EPIC-0003.** As of EPIC-0001, the `assignments` table did not exist yet, so
+> the repository's `hasAnyAssignments(employeeId)` check hardcoded a return of `false` — every
+> employee appeared deletion-eligible regardless of real assignment history, meaning FR-0003's
+> actual delete protection was a no-op in practice. EPIC-0003 (Assignment Engine) discharged
+> this follow-up in its task T036: `employee.repository.ts`'s `hasAnyAssignments` now runs a
+> real existence query against the `assignments` table (created by EPIC-0003's migration
+> `0003_assignment_engine`). See `specs/003-assignment-engine/data-model.md` and
+> `specs/003-assignment-engine/tasks.md` T036 for the resolving change.
 
 ## Skill
 

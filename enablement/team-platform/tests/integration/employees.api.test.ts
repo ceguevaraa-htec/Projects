@@ -98,4 +98,41 @@ describe("Employees API (integration)", () => {
     expect(res.status).toBe(404);
     expect(res.body.error_code).toBe("NOT_FOUND");
   });
+
+  it("blocks deleting an employee with a real assignment, and reflects real utilization/assignments (EPIC-0003 discharge of T044)", async () => {
+    const employee = await request(app).post("/employees").send({
+      name: "Katherine Johnson",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+    const employeeId = employee.body.employeeId as string;
+
+    const project = await request(app).post("/projects").send({
+      name: "Apollo Trajectory",
+      startDate: "2024-01-01",
+      endDate: "2024-12-31",
+    });
+    await request(app).patch(`/projects/${project.body.projectId}`).send({ status: "Active" });
+    const role = await request(app)
+      .post(`/projects/${project.body.projectId}/roles`)
+      .send({ name: "Analyst", capacityPercent: 100 });
+
+    const today = new Date().toISOString().slice(0, 10);
+    await request(app).post("/assignments").send({
+      employeeId,
+      projectId: project.body.projectId,
+      roleId: role.body.roleId,
+      capacityPercent: 60,
+      startDate: today,
+      endDate: today,
+    });
+
+    const beforeDelete = await request(app).get(`/employees/${employeeId}`).send();
+    expect(beforeDelete.body.currentUtilizationPercent).toBe(60);
+    expect(beforeDelete.body.assignments).toHaveLength(1);
+
+    const deleteRes = await request(app).delete(`/employees/${employeeId}`).send();
+    expect(deleteRes.status).toBe(409);
+    expect(deleteRes.body.error_code).toBe("EMPLOYEE_HAS_ASSIGNMENTS");
+  });
 });

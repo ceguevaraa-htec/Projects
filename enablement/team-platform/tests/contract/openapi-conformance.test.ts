@@ -213,3 +213,124 @@ describe("OpenAPI conformance — Employee Management endpoints", () => {
     expect(res.body.error_code).toBe("PROJECT_NOT_EDITABLE");
   });
 });
+
+function addDays(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function todayIso(): string {
+  return addDays(new Date().toISOString().slice(0, 10), 0);
+}
+
+describe("OpenAPI conformance — Assignment Engine endpoints", () => {
+  let testDb: TestDb;
+  let app: ReturnType<typeof createApp>;
+
+  beforeAll(async () => {
+    testDb = await createTestDb();
+    app = createApp(testDb.db);
+  });
+
+  afterAll(async () => {
+    await testDb.cleanup();
+  });
+
+  async function setupActiveProjectWithRole() {
+    const project = await request(app).post("/projects").send({
+      name: "Contract Test Project",
+      startDate: "2024-01-01",
+      endDate: "2024-12-31",
+    });
+    await request(app).patch(`/projects/${project.body.projectId}`).send({ status: "Active" });
+    const role = await request(app)
+      .post(`/projects/${project.body.projectId}/roles`)
+      .send({ name: "Engineer", capacityPercent: 100 });
+    return { projectId: project.body.projectId as string, roleId: role.body.roleId as string };
+  }
+
+  it("POST /assignments and GET /assignments/{assignmentId} return the Assignment schema shape", async () => {
+    const employee = await request(app).post("/employees").send({
+      name: "Contract Test Employee",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+    const { projectId, roleId } = await setupActiveProjectWithRole();
+
+    const created = await request(app)
+      .post("/assignments")
+      .send({
+        employeeId: employee.body.employeeId,
+        projectId,
+        roleId,
+        capacityPercent: 50,
+        startDate: addDays(todayIso(), 1),
+        endDate: addDays(todayIso(), 10),
+      });
+    expect(created.status).toBe(201);
+    expect(Object.keys(created.body).sort()).toEqual(
+      [
+        "assignmentId",
+        "employeeId",
+        "employeeName",
+        "projectId",
+        "projectName",
+        "roleId",
+        "roleName",
+        "capacityPercent",
+        "startDate",
+        "endDate",
+        "temporalStatus",
+      ].sort(),
+    );
+
+    const fetched = await request(app).get(`/assignments/${created.body.assignmentId}`).send();
+    expect(fetched.status).toBe(200);
+    expect(Object.keys(fetched.body).sort()).toEqual(Object.keys(created.body).sort());
+  });
+
+  it("PATCH /assignments/{assignmentId} on a past-dated assignment returns 409 ASSIGNMENT_NOT_EDITABLE with the ErrorResponse shape", async () => {
+    const employee = await request(app).post("/employees").send({
+      name: "Past Assignment Employee",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+    const { projectId, roleId } = await setupActiveProjectWithRole();
+
+    const pastAssignment = await request(app)
+      .post("/assignments")
+      .send({
+        employeeId: employee.body.employeeId,
+        projectId,
+        roleId,
+        capacityPercent: 40,
+        startDate: addDays(todayIso(), -10),
+        endDate: addDays(todayIso(), -1),
+      });
+
+    const res = await request(app)
+      .patch(`/assignments/${pastAssignment.body.assignmentId}`)
+      .send({ capacityPercent: 50 });
+    expect(res.status).toBe(409);
+    expect(Object.keys(res.body).sort()).toEqual(["error_code", "message"].sort());
+    expect(res.body.error_code).toBe("ASSIGNMENT_NOT_EDITABLE");
+  });
+
+  it("GET /projects/{projectId}/roles/{roleId}/candidates returns an array of CandidateEmployee shapes", async () => {
+    const { projectId, roleId } = await setupActiveProjectWithRole();
+    await request(app).post("/employees").send({
+      name: "Candidate Shape Check",
+      employmentStartDate: "2024-01-01",
+      seniority: "Mid",
+    });
+
+    const res = await request(app).get(`/projects/${projectId}/roles/${roleId}/candidates`).send();
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+    expect(Object.keys(res.body[0]).sort()).toEqual(
+      ["employeeId", "name", "seniority", "currentUtilizationPercent", "matchTier"].sort(),
+    );
+  });
+});

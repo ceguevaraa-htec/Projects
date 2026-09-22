@@ -44,6 +44,16 @@ export interface ProjectRoleSkillTable {
   skill_id: string;
 }
 
+export interface AssignmentTable {
+  id: Generated<string>;
+  employee_id: string;
+  project_id: string;
+  project_role_id: string;
+  capacity_percent: number;
+  start_date: string;
+  end_date: string;
+}
+
 export interface Database {
   employees: EmployeeTable;
   skills: SkillTable;
@@ -51,4 +61,5 @@ export interface Database {
   projects: ProjectTable;
   project_roles: ProjectRoleTable;
   project_role_skills: ProjectRoleSkillTable;
+  assignments: AssignmentTable;
 }

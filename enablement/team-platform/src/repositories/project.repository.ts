@@ -25,12 +25,8 @@ export interface ProjectRepository {
   findAll(filters: ProjectListFilters): Promise<ProjectRecord[]>;
   delete(projectId: string): Promise<void>;
   /**
-   * TODO(EPIC-0003): Interim stub, mirroring EPIC-0001's Employee.hasAnyAssignments exactly
-   * (employee.repository.ts) — the `assignments` table does not exist until EPIC-0003, so this
-   * always returns false. MUST become a real existence query once that table exists. Resolve
-   * this alongside EPIC-0001's identical follow-up (tasks.md T044) — both are the same pattern
-   * applied to two tables and should land together. See data-model.md's flagged cross-epic
-   * follow-up and tasks.md T033.
+   * Real existence query as of EPIC-0003 (see specs/002-project-management/data-model.md,
+   * now resolved, and specs/003-assignment-engine/tasks.md T039).
    */
   hasAnyAssignments(projectId: string): Promise<boolean>;
 
@@ -40,9 +36,8 @@ export interface ProjectRepository {
   findRoleById(roleId: string): Promise<ProjectRoleRecord | undefined>;
   findRolesForProject(projectId: string): Promise<ProjectRoleRecord[]>;
   /**
-   * TODO(EPIC-0003): Interim stub, mirroring hasAnyAssignments exactly: hardcoded to false
-   * until EPIC-0003's assignments table exists. Resolve alongside EPIC-0001's T044 and this
-   * file's hasAnyAssignments follow-up (tasks.md T033) — see data-model.md's flagged note.
+   * Real existence query as of EPIC-0003 (see specs/002-project-management/data-model.md,
+   * now resolved, and specs/003-assignment-engine/tasks.md T040).
    */
   roleHasAnyAssignments(roleId: string): Promise<boolean>;
 }
@@ -149,8 +144,15 @@ export class KyselyProjectRepository implements ProjectRepository {
     await this.db.deleteFrom("projects").where("id", "=", projectId).execute();
   }
 
-  async hasAnyAssignments(_projectId: string): Promise<boolean> {
-    return false;
+  async hasAnyAssignments(projectId: string): Promise<boolean> {
+    // assignments.project_id is a stored column (not derived), per data-model.md — no join
+    // through project_roles is needed here.
+    const row = await this.db
+      .selectFrom("assignments")
+      .select("id")
+      .where("project_id", "=", projectId)
+      .executeTakeFirst();
+    return row !== undefined;
   }
 
   private async hydrateRole(roleRow: {
@@ -259,7 +261,12 @@ export class KyselyProjectRepository implements ProjectRepository {
     return Promise.all(rows.map((row) => this.hydrateRole(row)));
   }
 
-  async roleHasAnyAssignments(_roleId: string): Promise<boolean> {
-    return false;
+  async roleHasAnyAssignments(roleId: string): Promise<boolean> {
+    const row = await this.db
+      .selectFrom("assignments")
+      .select("id")
+      .where("project_role_id", "=", roleId)
+      .executeTakeFirst();
+    return row !== undefined;
   }
 }

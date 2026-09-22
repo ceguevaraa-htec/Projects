@@ -242,6 +242,9 @@ functionally complete, and EPIC-0001's T043 follow-up is discharged.
       real existence queries against the `assignments` table once the Assignment Engine epic's
       schema exists — grouped with EPIC-0001's identical `Employee.hasAnyAssignments` follow-up,
       since both should be resolved together as the same pattern applied to two tables.
+      **✅ Follow-up resolved by EPIC-0003 tasks T039/T040**
+      (`specs/003-assignment-engine/tasks.md`) — both now run real existence queries against
+      the `assignments` table.
 
 ---
 

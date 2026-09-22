@@ -104,3 +104,46 @@ export interface ProjectListFilters {
   sort?: "name" | "startDate" | "endDate";
   order?: "asc" | "desc";
 }
+
+export type TemporalStatus = "future" | "current" | "past";
+export type MatchTier = "strong" | "partial" | "no_match" | "no_requirement";
+
+/** Field names match the OpenAPI Assignment schema. */
+export interface AssignmentRecord {
+  assignmentId: string;
+  employeeId: string;
+  employeeName: string;
+  projectId: string;
+  projectName: string;
+  roleId: string;
+  roleName: string;
+  capacityPercent: number;
+  startDate: string;
+  endDate: string;
+  temporalStatus: TemporalStatus;
+}
+
+export interface AssignmentCreateInput {
+  employeeId: string;
+  projectId: string;
+  roleId: string;
+  capacityPercent: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface AssignmentUpdateInput {
+  roleId?: string;
+  capacityPercent?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+/** Field names match the OpenAPI CandidateEmployee schema. */
+export interface CandidateEmployeeRecord {
+  employeeId: string;
+  name: string;
+  seniority: Seniority;
+  currentUtilizationPercent: number;
+  matchTier: MatchTier;
+}
