@@ -133,4 +133,83 @@ describe("OpenAPI conformance — Employee Management endpoints", () => {
     expect(Object.keys(res.body).sort()).toEqual(["error_code", "message"].sort());
     expect(res.body.error_code).toBe("SKILL_NAME_NOT_UNIQUE");
   });
+
+  it("POST /projects returns 201 with the Project schema shape", async () => {
+    const res = await request(app).post("/projects").send({
+      name: "Modernization",
+      startDate: "2024-01-01",
+      endDate: "2024-12-01",
+    });
+    expect(res.status).toBe(201);
+    expect(Object.keys(res.body).sort()).toEqual(
+      ["projectId", "name", "status", "startDate", "endDate"].sort(),
+    );
+  });
+
+  it("GET /projects returns 200 with an array of ProjectSummary shapes", async () => {
+    const res = await request(app).get("/projects").send();
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    if (res.body.length > 0) {
+      expect(Object.keys(res.body[0]).sort()).toEqual(
+        ["projectId", "name", "status", "startDate", "endDate", "requiredRoleCount"].sort(),
+      );
+    }
+  });
+
+  it("GET /projects/{projectId} returns 200 with the Project schema shape (embedded requiredRoles)", async () => {
+    const created = await request(app).post("/projects").send({
+      name: "Observability Rollout",
+      startDate: "2024-01-01",
+      endDate: "2024-12-01",
+    });
+    const res = await request(app).get(`/projects/${created.body.projectId}`).send();
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body).sort()).toEqual(
+      ["projectId", "name", "status", "startDate", "endDate", "requiredRoles"].sort(),
+    );
+  });
+
+  it("POST/PATCH /projects/{projectId}/roles return 201/200 with the ProjectRole schema shape", async () => {
+    const project = await request(app).post("/projects").send({
+      name: "Search Revamp",
+      startDate: "2024-01-01",
+      endDate: "2024-12-01",
+    });
+    const projectId = project.body.projectId as string;
+
+    const created = await request(app)
+      .post(`/projects/${projectId}/roles`)
+      .send({ name: "Search Engineer", capacityPercent: 60 });
+    expect(created.status).toBe(201);
+    expect(Object.keys(created.body).sort()).toEqual(
+      ["roleId", "name", "capacityPercent", "requiredSkills"].sort(),
+    );
+
+    const updated = await request(app)
+      .patch(`/projects/${projectId}/roles/${created.body.roleId}`)
+      .send({ capacityPercent: 80 });
+    expect(updated.status).toBe(200);
+    expect(Object.keys(updated.body).sort()).toEqual(
+      ["roleId", "name", "capacityPercent", "requiredSkills"].sort(),
+    );
+  });
+
+  it("role management on a Completed project returns 409 with error_code PROJECT_NOT_EDITABLE (SC-005)", async () => {
+    const project = await request(app).post("/projects").send({
+      name: "Wrapped Up",
+      startDate: "2024-01-01",
+      endDate: "2024-06-01",
+    });
+    const projectId = project.body.projectId as string;
+    await request(app).patch(`/projects/${projectId}`).send({ status: "Active" });
+    await request(app).patch(`/projects/${projectId}`).send({ status: "Completed" });
+
+    const res = await request(app)
+      .post(`/projects/${projectId}/roles`)
+      .send({ name: "Too Late", capacityPercent: 50 });
+    expect(res.status).toBe(409);
+    expect(Object.keys(res.body).sort()).toEqual(["error_code", "message"].sort());
+    expect(res.body.error_code).toBe("PROJECT_NOT_EDITABLE");
+  });
 });

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { EmployeeRepository } from "../../src/repositories/employee.repository.js";
 import type { SkillRepository } from "../../src/repositories/skill.repository.js";
+import type { ProjectRepository } from "../../src/repositories/project.repository.js";
 import type {
   EmployeeCreateInput,
   EmployeeListFilters,
@@ -8,6 +9,13 @@ import type {
   EmployeeSkillRecord,
   EmployeeUpdateInput,
   Proficiency,
+  ProjectCreateInput,
+  ProjectListFilters,
+  ProjectRecord,
+  ProjectRoleCreateInput,
+  ProjectRoleRecord,
+  ProjectRoleUpdateInput,
+  ProjectUpdateInput,
   SkillRecord,
 } from "../../src/domain/types.js";
 
@@ -66,6 +74,12 @@ export class FakeEmployeeRepository implements EmployeeRepository {
 export class FakeSkillRepository implements SkillRepository {
   private readonly skills = new Map<string, SkillRecord>();
   private readonly associations = new Map<string, EmployeeSkillRecord>();
+  /**
+   * Settable per-test, mirroring the real countProjectRoleAssociations query now that EPIC-0002
+   * has replaced the EPIC-0001 hardcoded-0 stub with a real one (see skill.repository.ts).
+   * Lets skill.service.test.ts assert getDeletionImpact reflects a real, non-zero count.
+   */
+  public projectRoleAssociationCounts = new Map<string, number>();
 
   private key(employeeId: string, skillId: string): string {
     return `${employeeId}::${skillId}`;
@@ -108,8 +122,8 @@ export class FakeSkillRepository implements SkillRepository {
     return [...this.associations.values()].filter((a) => a.skillId === skillId).length;
   }
 
-  async countProjectRoleAssociations(_skillId: string): Promise<number> {
-    return 0;
+  async countProjectRoleAssociations(skillId: string): Promise<number> {
+    return this.projectRoleAssociationCounts.get(skillId) ?? 0;
   }
 
   async findEmployeeSkill(
@@ -153,5 +167,100 @@ export class FakeSkillRepository implements SkillRepository {
 
   async deleteEmployeeSkill(employeeId: string, skillId: string): Promise<void> {
     this.associations.delete(this.key(employeeId, skillId));
+  }
+}
+
+/**
+ * In-memory test double for ProjectRepository, used by Domain Logic unit tests. Mirrors
+ * FakeEmployeeRepository's pattern: `assignmentsByProjectId`/`assignmentsByRoleId` are settable
+ * per-test, independent of the real repository's hardcoded-false stubs, so the "blocked"
+ * branches are exercisable here even though they can't be integration-tested until EPIC-0003.
+ */
+export class FakeProjectRepository implements ProjectRepository {
+  private readonly projects = new Map<string, ProjectRecord>();
+  private readonly roles = new Map<string, ProjectRoleRecord>();
+  public assignmentsByProjectId = new Set<string>();
+  public assignmentsByRoleId = new Set<string>();
+
+  async insert(input: ProjectCreateInput): Promise<ProjectRecord> {
+    const record: ProjectRecord = {
+      projectId: randomUUID(),
+      name: input.name,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      status: "Draft",
+    };
+    this.projects.set(record.projectId, record);
+    return record;
+  }
+
+  async update(projectId: string, input: ProjectUpdateInput): Promise<ProjectRecord | undefined> {
+    const existing = this.projects.get(projectId);
+    if (!existing) return undefined;
+    const updated: ProjectRecord = { ...existing, ...input };
+    this.projects.set(projectId, updated);
+    return updated;
+  }
+
+  async findById(projectId: string): Promise<ProjectRecord | undefined> {
+    return this.projects.get(projectId);
+  }
+
+  async findAll(_filters: ProjectListFilters): Promise<ProjectRecord[]> {
+    return [...this.projects.values()];
+  }
+
+  async delete(projectId: string): Promise<void> {
+    this.projects.delete(projectId);
+  }
+
+  async hasAnyAssignments(projectId: string): Promise<boolean> {
+    return this.assignmentsByProjectId.has(projectId);
+  }
+
+  async insertRole(projectId: string, input: ProjectRoleCreateInput): Promise<ProjectRoleRecord> {
+    const record: ProjectRoleRecord = {
+      roleId: randomUUID(),
+      projectId,
+      name: input.name,
+      capacityPercent: input.capacityPercent,
+      requiredSkills: (input.requiredSkillIds ?? []).map((skillId) => ({ skillId, name: "" })),
+    };
+    this.roles.set(record.roleId, record);
+    return record;
+  }
+
+  async updateRole(
+    roleId: string,
+    input: ProjectRoleUpdateInput,
+  ): Promise<ProjectRoleRecord | undefined> {
+    const existing = this.roles.get(roleId);
+    if (!existing) return undefined;
+    const updated: ProjectRoleRecord = {
+      ...existing,
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.capacityPercent !== undefined ? { capacityPercent: input.capacityPercent } : {}),
+      ...(input.requiredSkillIds !== undefined
+        ? { requiredSkills: input.requiredSkillIds.map((skillId) => ({ skillId, name: "" })) }
+        : {}),
+    };
+    this.roles.set(roleId, updated);
+    return updated;
+  }
+
+  async deleteRole(roleId: string): Promise<void> {
+    this.roles.delete(roleId);
+  }
+
+  async findRoleById(roleId: string): Promise<ProjectRoleRecord | undefined> {
+    return this.roles.get(roleId);
+  }
+
+  async findRolesForProject(projectId: string): Promise<ProjectRoleRecord[]> {
+    return [...this.roles.values()].filter((r) => r.projectId === projectId);
+  }
+
+  async roleHasAnyAssignments(roleId: string): Promise<boolean> {
+    return this.assignmentsByRoleId.has(roleId);
   }
 }

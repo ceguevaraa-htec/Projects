@@ -84,15 +84,18 @@ describe("SkillService — deletion impact (FR-0008)", () => {
     });
   });
 
-  it("returns the project-role count as an interim 0 (EPIC-0001 fallback, see data-model.md)", async () => {
+  it("returns a real, non-zero project-role count (EPIC-0002 discharge of EPIC-0001's follow-up)", async () => {
     const { service, skills } = makeService();
     const skill = await service.createSkill("Kotlin");
     await skills.insertEmployeeSkill("employee-1", skill.skillId, "Expert");
     await skills.insertEmployeeSkill("employee-2", skill.skillId, "Beginner");
+    // Simulates two project roles requiring this skill — previously impossible to assert
+    // meaningfully, since EPIC-0001's stub (and the fake mirroring it) always returned 0.
+    skills.projectRoleAssociationCounts.set(skill.skillId, 2);
 
     const impact = await service.getDeletionImpact(skill.skillId);
     expect(impact.affectedEmployeeCount).toBe(2);
-    expect(impact.affectedProjectRoleCount).toBe(0);
+    expect(impact.affectedProjectRoleCount).toBe(2);
   });
 });
 

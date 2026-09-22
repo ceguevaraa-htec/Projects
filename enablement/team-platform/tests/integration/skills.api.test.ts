@@ -54,6 +54,27 @@ describe("Skills API (integration)", () => {
     expect(collision.body.error_code).toBe("SKILL_NAME_NOT_UNIQUE");
   });
 
+  it("reflects a real, non-zero affectedProjectRoleCount once a project role requires the skill (EPIC-0002 discharge of EPIC-0001's T043 follow-up)", async () => {
+    const skill = await request(app).post("/skills").send({ name: "Terraform" });
+    const skillId = skill.body.skillId as string;
+
+    const impactBefore = await request(app).get(`/skills/${skillId}/deletion-impact`).send();
+    expect(impactBefore.body.affectedProjectRoleCount).toBe(0);
+
+    const project = await request(app).post("/projects").send({
+      name: "Infra Migration",
+      startDate: "2024-01-01",
+      endDate: "2024-12-01",
+    });
+    await request(app)
+      .post(`/projects/${project.body.projectId}/roles`)
+      .send({ name: "Platform Engineer", capacityPercent: 50, requiredSkillIds: [skillId] });
+
+    const impactAfter = await request(app).get(`/skills/${skillId}/deletion-impact`).send();
+    expect(impactAfter.status).toBe(200);
+    expect(impactAfter.body.affectedProjectRoleCount).toBe(1);
+  });
+
   it("returns 404 SkillNotFoundError for GET/PATCH/deletion-impact/DELETE on a nonexistent id", async () => {
     const patchRes = await request(app).patch("/skills/does-not-exist").send({ name: "X" });
     expect(patchRes.status).toBe(404);

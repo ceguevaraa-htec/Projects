@@ -67,3 +67,59 @@ export class DuplicateEmployeeSkillError extends DomainError {
     super(`Employee "${employeeId}" already has an association with skill "${skillId}".`);
   }
 }
+
+export class ProjectNotFoundError extends DomainError {
+  readonly errorCode = "NOT_FOUND";
+  readonly httpStatus = 404;
+
+  constructor(projectId: string) {
+    super(`Project "${projectId}" does not exist.`);
+  }
+}
+
+export class ProjectRoleNotFoundError extends DomainError {
+  readonly errorCode = "NOT_FOUND";
+  readonly httpStatus = 404;
+
+  constructor(roleId: string) {
+    super(`Project role "${roleId}" does not exist.`);
+  }
+}
+
+export class ProjectHasAssignmentsError extends DomainError {
+  readonly errorCode = "PROJECT_HAS_ASSIGNMENTS";
+  readonly httpStatus = 409;
+
+  constructor(projectId: string) {
+    super(`Can't delete project "${projectId}" — it has existing assignments.`);
+  }
+}
+
+export class ProjectRoleHasAssignmentsError extends DomainError {
+  readonly errorCode = "ROLE_HAS_ASSIGNMENTS";
+  readonly httpStatus = 409;
+
+  constructor(roleId: string) {
+    super(`Can't remove role "${roleId}" — it has existing assignments.`);
+  }
+}
+
+export class InvalidStatusTransitionError extends DomainError {
+  readonly errorCode = "INVALID_STATUS_TRANSITION";
+  readonly httpStatus = 409;
+
+  constructor(from: string, to: string) {
+    super(`Can't move this project from ${from} to ${to}.`);
+  }
+}
+
+export class ProjectNotEditableError extends DomainError {
+  readonly errorCode = "PROJECT_NOT_EDITABLE";
+  readonly httpStatus = 409;
+
+  constructor(projectId: string, status: string) {
+    super(
+      `Can't manage required roles on project "${projectId}" — it is ${status}, and role management is only permitted while Draft or Active.`,
+    );
+  }
+}

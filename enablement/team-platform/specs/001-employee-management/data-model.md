@@ -104,16 +104,13 @@ Corresponds to OpenAPI schema `SkillDeletionImpact`.
 | `affectedEmployeeCount` | integer | Count of `EmployeeSkill` rows referencing this skill (computed by this epic). |
 | `affectedProjectRoleCount` | integer | Count of project-role "required skill" rows referencing this skill (owned by the Project Management epic's schema). |
 
-> **⚠️ Cross-epic follow-up required (interim behavior, not a permanent design):** As of
-> EPIC-0001, the `project_roles`/required-skills tables do not exist yet, so
-> `affectedProjectRoleCount` is hardcoded to `0` rather than computed from a real query. This is
-> an interim fallback specific to implementing EPIC-0001 before EPIC-0002 (Project Management)
-> lands — it is **not** a permanent design decision. Once EPIC-0002's schema exists, this field
-> MUST be changed to a real query against the project-role required-skills table; otherwise this
-> count will silently stay wrong (always 0) forever, undermining the entire purpose of the
-> deletion-impact preview (FR-0008) for any skill actually in use by a project role. **This must
-> be raised explicitly during EPIC-0002's own planning (`/speckit.plan` for Project Management)
-> as a required change to this epic's `skill.service.ts`, not assumed to be already handled.**
+> **✅ RESOLVED by EPIC-0002.** As of EPIC-0001, the `project_roles`/required-skills tables did
+> not exist yet, so `affectedProjectRoleCount` was hardcoded to `0`. This was an interim
+> fallback, not a permanent design decision. EPIC-0002 (Project Management) discharged this
+> follow-up in its task T027: `skill.repository.ts`'s `countProjectRoleAssociations` now runs a
+> real query against `project_role_skills` (created by EPIC-0002's migration
+> `0002_project_management`). See `specs/002-project-management/data-model.md` and
+> `specs/002-project-management/tasks.md` T027 for the resolving change.
 
 ## State Transitions
 

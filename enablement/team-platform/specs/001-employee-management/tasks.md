@@ -291,6 +291,8 @@ functionally complete.
       `TODO` referencing data-model.md's flagged note), that
       `countProjectRoleAssociations`/`affectedProjectRoleCount` must become a real query once
       the Project Management epic's schema exists — do not let this silently ship as permanent.
+      **✅ Follow-up resolved by EPIC-0002 task T027** (`specs/002-project-management/tasks.md`)
+      — `countProjectRoleAssociations` now runs a real query against `project_role_skills`.
 - [X] T044 Record, in a comment or follow-up note visible to whoever plans EPIC-0003 (e.g., a
       `TODO` in `employee.repository.ts` referencing data-model.md's flagged note), that
       `hasAnyAssignments` currently hardcodes `false` and must become a real existence query

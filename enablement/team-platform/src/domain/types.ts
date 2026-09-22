@@ -1,6 +1,6 @@
-import type { Proficiency, Seniority } from "../db/schema.js";
+import type { Proficiency, ProjectStatus, Seniority } from "../db/schema.js";
 
-export type { Proficiency, Seniority };
+export type { Proficiency, ProjectStatus, Seniority };
 
 /** Field names match specs/contracts/openapi-spec.yaml's Employee/EmployeeSummary schemas. */
 export interface EmployeeRecord {
@@ -51,4 +51,56 @@ export interface SkillDeletionImpact {
   skillId: string;
   affectedEmployeeCount: number;
   affectedProjectRoleCount: number;
+}
+
+/** Field names match the OpenAPI ProjectRole schema. */
+export interface ProjectRoleRecord {
+  roleId: string;
+  projectId: string;
+  name: string;
+  capacityPercent: number;
+  requiredSkills: SkillRecord[];
+}
+
+export interface ProjectRoleCreateInput {
+  name: string;
+  capacityPercent: number;
+  requiredSkillIds?: string[];
+}
+
+export interface ProjectRoleUpdateInput {
+  name?: string;
+  capacityPercent?: number;
+  requiredSkillIds?: string[];
+}
+
+/** Field names match the OpenAPI Project/ProjectSummary schemas. */
+export interface ProjectRecord {
+  projectId: string;
+  name: string;
+  status: ProjectStatus;
+  startDate: string;
+  endDate: string;
+}
+
+export interface ProjectCreateInput {
+  name: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface ProjectUpdateInput {
+  name?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: ProjectStatus;
+}
+
+export interface ProjectListFilters {
+  status?: ProjectStatus;
+  requiredRole?: string;
+  startDateFrom?: string;
+  startDateTo?: string;
+  sort?: "name" | "startDate" | "endDate";
+  order?: "asc" | "desc";
 }

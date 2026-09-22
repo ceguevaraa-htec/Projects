@@ -19,9 +19,10 @@ export interface SkillRepository {
   delete(skillId: string): Promise<void>;
   countEmployeeAssociations(skillId: string): Promise<number>;
   /**
-   * Interim EPIC-0001-only stub: the project-role required-skills table does not exist until
-   * EPIC-0002 (Project Management), so this always returns 0. MUST become a real query once
-   * that table exists — see data-model.md's flagged cross-epic follow-up and tasks.md T043.
+   * Real query as of EPIC-0002: counts project_role_skills rows referencing this skill.
+   * Previously a hardcoded-0 stub in EPIC-0001, pending EPIC-0002's project_role_skills table —
+   * see specs/001-employee-management/data-model.md and tasks.md T043 (now resolved) and
+   * specs/002-project-management/tasks.md T027 (the task that discharged this follow-up).
    */
   countProjectRoleAssociations(skillId: string): Promise<number>;
 
@@ -105,8 +106,13 @@ export class KyselySkillRepository implements SkillRepository {
     return Number(result.count);
   }
 
-  async countProjectRoleAssociations(_skillId: string): Promise<number> {
-    return 0;
+  async countProjectRoleAssociations(skillId: string): Promise<number> {
+    const result = await this.db
+      .selectFrom("project_role_skills")
+      .select(({ fn }) => fn.countAll<number>().as("count"))
+      .where("skill_id", "=", skillId)
+      .executeTakeFirstOrThrow();
+    return Number(result.count);
   }
 
   async findEmployeeSkill(
