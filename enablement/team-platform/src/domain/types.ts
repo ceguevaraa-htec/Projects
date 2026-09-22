@@ -29,7 +29,9 @@ export interface EmployeeListFilters {
   skill?: string;
   proficiency?: Proficiency;
   seniority?: Seniority;
-  sort?: "name" | "employmentStartDate";
+  /** Available capacity % floor (100 - currentUtilizationPercent >= minAvailability). Applied in EmployeeService, not the repository — utilization isn't a stored column. */
+  minAvailability?: number;
+  sort?: "name" | "employmentStartDate" | "utilization";
   order?: "asc" | "desc";
 }
 

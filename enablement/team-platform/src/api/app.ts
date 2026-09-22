@@ -31,7 +31,6 @@ export function createApp(db: Kysely<Database>): Express {
   const skillRepository = new KyselySkillRepository(db);
   const projectRepository = new KyselyProjectRepository(db);
   const assignmentRepository = new KyselyAssignmentRepository(db);
-  const employeeService = new EmployeeService(employeeRepository, skillRepository);
   const skillService = new SkillService(skillRepository);
   const projectService = new ProjectService(projectRepository, skillRepository);
   const assignmentService = new AssignmentService(
@@ -39,6 +38,11 @@ export function createApp(db: Kysely<Database>): Express {
     employeeRepository,
     projectRepository,
     skillRepository,
+  );
+  const employeeService = new EmployeeService(
+    employeeRepository,
+    skillRepository,
+    assignmentService,
   );
   const benchService = new BenchService(employeeRepository, assignmentRepository, skillRepository);
   const reportsService = new ReportsService(

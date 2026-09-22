@@ -60,6 +60,58 @@ describe("OpenAPI conformance — Employee Management endpoints", () => {
     }
   });
 
+  it("GET /employees?minAvailability=abc returns 400 with the ErrorResponse shape (EPIC-0006)", async () => {
+    const res = await request(app).get("/employees?minAvailability=abc").send();
+    expect(res.status).toBe(400);
+    expect(Object.keys(res.body).sort()).toEqual(["error_code", "message"].sort());
+    expect(res.body.error_code).toBe("VALIDATION_ERROR");
+  });
+
+  it("GET /employees?minAvailability=N filters correctly and GET /employees?sort=utilization sorts correctly, with real currentProjectNames (EPIC-0006)", async () => {
+    const project = await request(app)
+      .post("/projects")
+      .send({
+        name: `Contract Test Project ${Math.random()}`,
+        startDate: "2024-01-01",
+        endDate: "2024-12-31",
+      });
+    await request(app).patch(`/projects/${project.body.projectId}`).send({ status: "Active" });
+    const role = await request(app)
+      .post(`/projects/${project.body.projectId}/roles`)
+      .send({ name: "Engineer", capacityPercent: 100 });
+    const today = new Date().toISOString().slice(0, 10);
+
+    const employee = await request(app).post("/employees").send({
+      name: "Conformance Utilization Employee",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+    await request(app).post("/assignments").send({
+      employeeId: employee.body.employeeId,
+      projectId: project.body.projectId,
+      roleId: role.body.roleId,
+      capacityPercent: 70,
+      startDate: today,
+      endDate: today,
+    });
+
+    const filtered = await request(app).get("/employees?minAvailability=50").send();
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.map((e: { employeeId: string }) => e.employeeId)).not.toContain(
+      employee.body.employeeId,
+    );
+
+    const sorted = await request(app).get("/employees?sort=utilization&order=desc").send();
+    expect(sorted.status).toBe(200);
+    expect(sorted.body[0]).toBeDefined();
+
+    const listed = await request(app).get("/employees").send();
+    const entry = listed.body.find(
+      (e: { employeeId: string }) => e.employeeId === employee.body.employeeId,
+    );
+    expect(entry.currentProjectNames).toEqual([project.body.name]);
+  });
+
   it("GET /employees/{employeeId} returns 200 with the Employee schema shape (embedded skills/assignments)", async () => {
     const created = await request(app).post("/employees").send({
       name: "Frances Allen",

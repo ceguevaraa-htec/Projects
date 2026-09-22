@@ -1,5 +1,6 @@
 import type { EmployeeRepository } from "../repositories/employee.repository.js";
 import type { SkillRepository } from "../repositories/skill.repository.js";
+import type { AssignmentService } from "./assignment.service.js";
 import type {
   EmployeeCreateInput,
   EmployeeListFilters,
@@ -22,6 +23,7 @@ export class EmployeeService {
   constructor(
     private readonly employees: EmployeeRepository,
     private readonly skills: SkillRepository,
+    private readonly assignments: AssignmentService,
   ) {}
 
   async createEmployee(input: EmployeeCreateInput): Promise<EmployeeRecord> {
@@ -45,8 +47,41 @@ export class EmployeeService {
     return employee;
   }
 
-  async listEmployees(filters: EmployeeListFilters): Promise<EmployeeRecord[]> {
-    return this.employees.findAll(filters);
+  /**
+   * EPIC-0006: returns utilization-annotated records so minAvailability/sort=utilization can
+   * both read from one computed pass — neither the repository nor SQL can filter/sort by
+   * utilization, since it isn't a stored column (see research.md's Constitution Principle II
+   * call-out). skill/proficiency/seniority filtering and name/employmentStartDate sorting are
+   * unaffected — still pushed down to SQL by EmployeeRepository.findAll, as before.
+   */
+  async listEmployees(
+    filters: EmployeeListFilters,
+  ): Promise<Array<EmployeeRecord & { currentUtilizationPercent: number }>> {
+    const employees = await this.employees.findAll(filters);
+
+    let annotated = await Promise.all(
+      employees.map(async (employee) => ({
+        ...employee,
+        currentUtilizationPercent: await this.assignments.getCurrentUtilization(
+          employee.employeeId,
+        ),
+      })),
+    );
+
+    if (filters.minAvailability !== undefined) {
+      annotated = annotated.filter(
+        (employee) => 100 - employee.currentUtilizationPercent >= filters.minAvailability!,
+      );
+    }
+
+    if (filters.sort === "utilization") {
+      const direction = filters.order === "desc" ? -1 : 1;
+      annotated = [...annotated].sort(
+        (a, b) => (a.currentUtilizationPercent - b.currentUtilizationPercent) * direction,
+      );
+    }
+
+    return annotated;
   }
 
   async updateEmployee(employeeId: string, input: EmployeeUpdateInput): Promise<EmployeeRecord> {

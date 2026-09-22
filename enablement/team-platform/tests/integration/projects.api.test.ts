@@ -161,3 +161,129 @@ describe("Projects API (integration)", () => {
     expect(deleteProjectRes.body.error_code).toBe("PROJECT_HAS_ASSIGNMENTS");
   });
 });
+
+describe("GET /projects — existing filter/sort parameter backfill (EPIC-0006, US4/SC-004)", () => {
+  let testDb: TestDb;
+  let app: ReturnType<typeof createApp>;
+
+  beforeAll(async () => {
+    testDb = await createTestDb();
+    app = createApp(testDb.db);
+  });
+
+  afterAll(async () => {
+    await testDb.cleanup();
+  });
+
+  it("filters by status", async () => {
+    const draft = await request(app)
+      .post("/projects")
+      .send({
+        name: `Draft Project ${Math.random()}`,
+        startDate: "2024-01-01",
+        endDate: "2024-12-31",
+      });
+    const active = await request(app)
+      .post("/projects")
+      .send({
+        name: `Active Project ${Math.random()}`,
+        startDate: "2024-01-01",
+        endDate: "2024-12-31",
+      });
+    await request(app).patch(`/projects/${active.body.projectId}`).send({ status: "Active" });
+
+    const res = await request(app).get("/projects?status=Active").send();
+    const ids = res.body.map((p: { projectId: string }) => p.projectId);
+    expect(ids).toContain(active.body.projectId);
+    expect(ids).not.toContain(draft.body.projectId);
+  });
+
+  it("filters by requiredRole", async () => {
+    const roleName = `Backend Engineer ${Math.random()}`;
+    const withRole = await request(app)
+      .post("/projects")
+      .send({
+        name: `With Role ${Math.random()}`,
+        startDate: "2024-01-01",
+        endDate: "2024-12-31",
+      });
+    const withoutRole = await request(app)
+      .post("/projects")
+      .send({
+        name: `Without Role ${Math.random()}`,
+        startDate: "2024-01-01",
+        endDate: "2024-12-31",
+      });
+    await request(app)
+      .post(`/projects/${withRole.body.projectId}/roles`)
+      .send({ name: roleName, capacityPercent: 100 });
+
+    const res = await request(app)
+      .get(`/projects?requiredRole=${encodeURIComponent(roleName)}`)
+      .send();
+    const ids = res.body.map((p: { projectId: string }) => p.projectId);
+    expect(ids).toContain(withRole.body.projectId);
+    expect(ids).not.toContain(withoutRole.body.projectId);
+  });
+
+  it("filters by startDateFrom/startDateTo (date range)", async () => {
+    const early = await request(app)
+      .post("/projects")
+      .send({
+        name: `Early Start ${Math.random()}`,
+        startDate: "2020-01-01",
+        endDate: "2020-12-31",
+      });
+    const inRange = await request(app)
+      .post("/projects")
+      .send({
+        name: `In Range ${Math.random()}`,
+        startDate: "2025-06-01",
+        endDate: "2025-12-31",
+      });
+    const late = await request(app)
+      .post("/projects")
+      .send({
+        name: `Late Start ${Math.random()}`,
+        startDate: "2030-01-01",
+        endDate: "2030-12-31",
+      });
+
+    const res = await request(app)
+      .get("/projects?startDateFrom=2025-01-01&startDateTo=2025-12-31")
+      .send();
+    const ids = res.body.map((p: { projectId: string }) => p.projectId);
+    expect(ids).toContain(inRange.body.projectId);
+    expect(ids).not.toContain(early.body.projectId);
+    expect(ids).not.toContain(late.body.projectId);
+  });
+
+  it("sorts by name, startDate, and endDate", async () => {
+    const a = await request(app)
+      .post("/projects")
+      .send({
+        name: `AAA-${Math.random()}`,
+        startDate: "2024-06-01",
+        endDate: "2024-12-01",
+      });
+    const b = await request(app)
+      .post("/projects")
+      .send({
+        name: `ZZZ-${Math.random()}`,
+        startDate: "2024-01-01",
+        endDate: "2024-03-01",
+      });
+
+    const byNameAsc = await request(app).get("/projects?sort=name&order=asc").send();
+    const namesAsc = byNameAsc.body.map((p: { projectId: string }) => p.projectId);
+    expect(namesAsc.indexOf(a.body.projectId)).toBeLessThan(namesAsc.indexOf(b.body.projectId));
+
+    const byStartDateAsc = await request(app).get("/projects?sort=startDate&order=asc").send();
+    const startsAsc = byStartDateAsc.body.map((p: { projectId: string }) => p.projectId);
+    expect(startsAsc.indexOf(b.body.projectId)).toBeLessThan(startsAsc.indexOf(a.body.projectId));
+
+    const byEndDateAsc = await request(app).get("/projects?sort=endDate&order=asc").send();
+    const endsAsc = byEndDateAsc.body.map((p: { projectId: string }) => p.projectId);
+    expect(endsAsc.indexOf(b.body.projectId)).toBeLessThan(endsAsc.indexOf(a.body.projectId));
+  });
+});

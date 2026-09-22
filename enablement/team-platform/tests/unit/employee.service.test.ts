@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { EmployeeService } from "../../src/domain/employee.service.js";
-import { FakeEmployeeRepository, FakeSkillRepository } from "../helpers/fakes.js";
+import { AssignmentService } from "../../src/domain/assignment.service.js";
+import {
+  FakeAssignmentRepository,
+  FakeEmployeeRepository,
+  FakeProjectRepository,
+  FakeSkillRepository,
+} from "../helpers/fakes.js";
+import { addDays, today } from "../../src/domain/date-utils.js";
 import {
   DuplicateEmployeeSkillError,
   EmployeeHasAssignmentsError,
@@ -13,8 +20,16 @@ import {
 function makeService() {
   const employees = new FakeEmployeeRepository();
   const skills = new FakeSkillRepository();
-  const service = new EmployeeService(employees, skills);
-  return { service, employees, skills };
+  const projects = new FakeProjectRepository();
+  const assignmentRepository = new FakeAssignmentRepository();
+  const assignmentService = new AssignmentService(
+    assignmentRepository,
+    employees,
+    projects,
+    skills,
+  );
+  const service = new EmployeeService(employees, skills, assignmentService);
+  return { service, employees, skills, assignmentRepository };
 }
 
 describe("EmployeeService — create/edit (FR-0001/FR-0002)", () => {
@@ -190,5 +205,90 @@ describe("EmployeeService — skill associations (FR-0004/FR-0005)", () => {
     await expect(
       service.updateEmployeeSkill(employee.employeeId, skill.skillId, "Expert"),
     ).rejects.toBeInstanceOf(EmployeeSkillNotFoundError);
+  });
+});
+
+describe("EmployeeService — listEmployees minAvailability/sort=utilization (EPIC-0006)", () => {
+  it("filters by minAvailability using a single computed utilization pass", async () => {
+    const { service, assignmentRepository } = makeService();
+    const busy = await service.createEmployee({
+      name: "Busy",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+    const free = await service.createEmployee({
+      name: "Free",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+    assignmentRepository.seed({
+      employeeId: busy.employeeId,
+      employeeName: busy.name,
+      projectId: "p1",
+      projectName: "P1",
+      roleId: "r1",
+      roleName: "Engineer",
+      capacityPercent: 90,
+      startDate: today(),
+      endDate: addDays(today(), 5),
+    });
+    assignmentRepository.seed({
+      employeeId: free.employeeId,
+      employeeName: free.name,
+      projectId: "p1",
+      projectName: "P1",
+      roleId: "r1",
+      roleName: "Engineer",
+      capacityPercent: 60,
+      startDate: today(),
+      endDate: addDays(today(), 5),
+    });
+
+    const result = await service.listEmployees({ minAvailability: 30 });
+
+    expect(result.map((e) => e.employeeId)).toEqual([free.employeeId]);
+    expect(result[0].currentUtilizationPercent).toBe(60);
+  });
+
+  it("sorts by utilization ascending/descending without a second computation", async () => {
+    const { service, assignmentRepository } = makeService();
+    const low = await service.createEmployee({
+      name: "Low",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+    const mid = await service.createEmployee({
+      name: "Mid",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+    const high = await service.createEmployee({
+      name: "High",
+      employmentStartDate: "2024-01-01",
+      seniority: "Senior",
+    });
+    for (const [employee, capacityPercent] of [
+      [low, 20],
+      [mid, 50],
+      [high, 80],
+    ] as const) {
+      assignmentRepository.seed({
+        employeeId: employee.employeeId,
+        employeeName: employee.name,
+        projectId: "p1",
+        projectName: "P1",
+        roleId: "r1",
+        roleName: "Engineer",
+        capacityPercent,
+        startDate: today(),
+        endDate: addDays(today(), 5),
+      });
+    }
+
+    const asc = await service.listEmployees({ sort: "utilization", order: "asc" });
+    expect(asc.map((e) => e.currentUtilizationPercent)).toEqual([20, 50, 80]);
+
+    const desc = await service.listEmployees({ sort: "utilization", order: "desc" });
+    expect(desc.map((e) => e.currentUtilizationPercent)).toEqual([80, 50, 20]);
   });
 });
