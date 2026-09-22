@@ -9,6 +9,8 @@ import { EmployeeService } from "../domain/employee.service.js";
 import { SkillService } from "../domain/skill.service.js";
 import { ProjectService } from "../domain/project.service.js";
 import { AssignmentService } from "../domain/assignment.service.js";
+import { BenchService } from "../domain/bench.service.js";
+import { ReportsService } from "../domain/reports.service.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { createEmployeesRouter } from "./routes/employees.routes.js";
@@ -19,6 +21,8 @@ import {
   createProjectRoleCandidatesRouter,
 } from "./routes/projects.routes.js";
 import { createAssignmentsRouter } from "./routes/assignments.routes.js";
+import { createBenchRouter } from "./routes/bench.routes.js";
+import { createReportsRouter } from "./routes/reports.routes.js";
 
 /** Assembles the Express app: middleware + routes. No server listen() here. */
 export function createApp(db: Kysely<Database>): Express {
@@ -35,6 +39,13 @@ export function createApp(db: Kysely<Database>): Express {
     projectRepository,
     skillRepository,
   );
+  const benchService = new BenchService(employeeRepository, assignmentRepository, skillRepository);
+  const reportsService = new ReportsService(
+    employeeRepository,
+    projectRepository,
+    assignmentRepository,
+    assignmentService,
+  );
 
   const app = express();
 
@@ -47,6 +58,8 @@ export function createApp(db: Kysely<Database>): Express {
   app.use("/projects", createProjectsRouter(projectService));
   app.use("/projects", createProjectRoleCandidatesRouter(assignmentService));
   app.use("/assignments", createAssignmentsRouter(assignmentService));
+  app.use("/bench", createBenchRouter(benchService));
+  app.use("/reports", createReportsRouter(reportsService));
 
   app.use(errorHandler);
 

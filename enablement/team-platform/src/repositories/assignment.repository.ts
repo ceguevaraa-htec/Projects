@@ -14,6 +14,8 @@ export interface AssignmentRepository {
   update(assignmentId: string, input: AssignmentUpdateInput): Promise<AssignmentRecord | undefined>;
   findById(assignmentId: string): Promise<AssignmentRecord | undefined>;
   findAllForEmployee(employeeId: string): Promise<AssignmentRecord[]>;
+  /** Unfiltered (past/current/future) — see specs/004-bench-reporting/data-model.md for why current-only scoping is a Domain Logic decision, not a repository-level restriction. */
+  findAllForProject(projectId: string): Promise<AssignmentRecord[]>;
   delete(assignmentId: string): Promise<void>;
 }
 
@@ -132,6 +134,11 @@ export class KyselyAssignmentRepository implements AssignmentRepository {
     const rows = await this.joinedQuery()
       .where("assignments.employee_id", "=", employeeId)
       .execute();
+    return rows.map(toRecord);
+  }
+
+  async findAllForProject(projectId: string): Promise<AssignmentRecord[]> {
+    const rows = await this.joinedQuery().where("assignments.project_id", "=", projectId).execute();
     return rows.map(toRecord);
   }
 

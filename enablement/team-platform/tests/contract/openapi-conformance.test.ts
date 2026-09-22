@@ -334,3 +334,60 @@ describe("OpenAPI conformance — Assignment Engine endpoints", () => {
     );
   });
 });
+
+describe("OpenAPI conformance — Bench & Reporting endpoints", () => {
+  let testDb: TestDb;
+  let app: ReturnType<typeof createApp>;
+
+  beforeAll(async () => {
+    testDb = await createTestDb();
+    app = createApp(testDb.db);
+  });
+
+  afterAll(async () => {
+    await testDb.cleanup();
+  });
+
+  it("GET /bench returns 200 with an array of BenchEntry shapes", async () => {
+    await request(app).post("/employees").send({
+      name: "Bench Contract Check",
+      employmentStartDate: "2024-01-01",
+      seniority: "Mid",
+    });
+
+    const res = await request(app).get("/bench?window=now").send();
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+    expect(Object.keys(res.body[0]).sort()).toEqual(
+      ["employeeId", "name", "utilizationPercent", "availableCapacityPercent", "skills"].sort(),
+    );
+  });
+
+  it("GET /bench with a missing window returns 400 with the ErrorResponse shape", async () => {
+    const res = await request(app).get("/bench").send();
+    expect(res.status).toBe(400);
+    expect(Object.keys(res.body).sort()).toEqual(["error_code", "message"].sort());
+    expect(res.body.error_code).toBe("VALIDATION_ERROR");
+  });
+
+  it("GET /reports/org returns 200 with Content-Type application/pdf", async () => {
+    const res = await request(app).get("/reports/org").send();
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("application/pdf");
+  });
+
+  it("GET /reports/employees/{employeeId} for a nonexistent id returns 404 with the ErrorResponse shape", async () => {
+    const res = await request(app).get("/reports/employees/does-not-exist").send();
+    expect(res.status).toBe(404);
+    expect(Object.keys(res.body).sort()).toEqual(["error_code", "message"].sort());
+    expect(res.body.error_code).toBe("NOT_FOUND");
+  });
+
+  it("GET /reports/projects/{projectId} for a nonexistent id returns 404 with the ErrorResponse shape", async () => {
+    const res = await request(app).get("/reports/projects/does-not-exist").send();
+    expect(res.status).toBe(404);
+    expect(Object.keys(res.body).sort()).toEqual(["error_code", "message"].sort());
+    expect(res.body.error_code).toBe("NOT_FOUND");
+  });
+});

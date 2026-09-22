@@ -866,7 +866,16 @@ components:
       properties:
         employeeId: { type: string, format: uuid }
         name: { type: string }
-        utilizationPercent: { type: integer, minimum: 0, maximum: 100 }
+        utilizationPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: >
+            For window=now, this is the employee's actual current utilization. For
+            window=30d|60d|90d, this is the employee's minimum committed capacity at their
+            single most-available point within the window (not an average, and not a
+            snapshot at the window's end date) — see specs/004-bench-reporting/spec.md's
+            Assumptions for the resolved ambiguity behind this definition.
         availableCapacityPercent: { type: integer, minimum: 0, maximum: 100 }
         skills:
           type: array

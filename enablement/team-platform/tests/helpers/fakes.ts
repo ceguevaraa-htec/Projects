@@ -348,6 +348,10 @@ export class FakeAssignmentRepository implements AssignmentRepository {
     return [...this.rows.values()].filter((r) => r.employeeId === employeeId);
   }
 
+  async findAllForProject(projectId: string): Promise<AssignmentRecord[]> {
+    return [...this.rows.values()].filter((r) => r.projectId === projectId);
+  }
+
   async delete(assignmentId: string): Promise<void> {
     this.rows.delete(assignmentId);
   }
