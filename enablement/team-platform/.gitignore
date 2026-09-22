@@ -9,5 +9,17 @@ htec-kit/
 .vscode/*
 !.vscode/settings.json
 
-# Language/stack-specific entries go here once /speckit.plan picks the tech stack
-# (e.g. node_modules/, __pycache__/, .venv/, *.pyc, dist/, .env)
+# Node.js / TypeScript (per SDP: Express + Kysely + Vitest, picked in /speckit.plan)
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.*
+coverage/
+
+# SQLite database (per SDP ADR-0008: always regenerated via the seed script, never committed)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

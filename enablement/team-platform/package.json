@@ -1,0 +1,38 @@
+{
+  "name": "team-allocation-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Team Allocation Platform backend (EPIC-0001: Employee Management)",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "express": "^4.21.0",
+    "kysely": "^0.28.17"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.11.0",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.16.5",
+    "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^9.11.0",
+    "prettier": "^3.3.3",
+    "supertest": "^7.2.2",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.6.0",
+    "vitest": "^4.1.11"
+  }
+}

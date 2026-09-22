@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+*.db
+
+# SDD/spec-kit artifacts — owned by the HTEC kit / spec-kit tooling, not this codebase's
+# formatting conventions.
+.claude/
+.specify/
+htec-kit/
+specs/
