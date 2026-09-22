@@ -1,0 +1,873 @@
+openapi: 3.0.3
+info:
+  title: Team Allocation Platform API
+  version: "1.0.0"
+  description: >
+    REST API for the Team Allocation Platform — a locally-deployed resource-planning tool.
+    No authentication/authorization exists (per SDP ADR-0011); the Manager/Employee split is a
+    purely client-side UI concept. All errors use a consistent JSON envelope (see
+    ErrorResponse). No pagination or API versioning is used, given demo-scale data and a
+    single frontend consumer.
+servers:
+  - url: http://localhost:3000
+    description: Local development server (single process, per SDP)
+
+tags:
+  - name: Employees
+  - name: Skills
+  - name: Projects
+  - name: ProjectRoles
+  - name: Assignments
+  - name: Bench
+  - name: Reports
+
+paths:
+  /employees:
+    get:
+      tags: [Employees]
+      summary: List employees
+      description: Returns the full employee list (no pagination). Supports filtering and sorting.
+      parameters:
+        - name: skill
+          in: query
+          schema: { type: string }
+          description: Filter to employees who have this skill (by skill name).
+        - name: proficiency
+          in: query
+          schema: { $ref: '#/components/schemas/ProficiencyLevel' }
+          description: Filter to employees whose matching skill has this proficiency.
+        - name: seniority
+          in: query
+          schema: { $ref: '#/components/schemas/SeniorityLevel' }
+        - name: minAvailability
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 100 }
+          description: Filter to employees with at least this much available (unassigned) capacity %.
+        - name: sort
+          in: query
+          schema: { type: string, enum: [name, utilization, employmentStartDate] }
+          default: name
+        - name: order
+          in: query
+          schema: { type: string, enum: [asc, desc] }
+          default: asc
+      responses:
+        '200':
+          description: List of employees (summary form, without embedded detail).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/EmployeeSummary' }
+    post:
+      tags: [Employees]
+      summary: Create an employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeCreateRequest' }
+      responses:
+        '201':
+          description: Employee created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Employee' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+
+  /employees/{employeeId}:
+    parameters:
+      - $ref: '#/components/parameters/EmployeeId'
+    get:
+      tags: [Employees]
+      summary: Get employee detail
+      description: Returns full employee detail with embedded skills and current assignments.
+      responses:
+        '200':
+          description: Employee detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Employee' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    patch:
+      tags: [Employees]
+      summary: Update employee core fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeUpdateRequest' }
+      responses:
+        '200':
+          description: Employee updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Employee' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    delete:
+      tags: [Employees]
+      summary: Delete an employee
+      description: Blocked (per FR-0003) if the employee has any assignments (past, current, or future).
+      responses:
+        '204':
+          description: Employee deleted.
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409':
+          description: Employee has existing assignments; deletion blocked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error_code: EMPLOYEE_HAS_ASSIGNMENTS, message: "Can't delete this employee — they have existing assignments." }
+
+  /employees/{employeeId}/skills:
+    parameters:
+      - $ref: '#/components/parameters/EmployeeId'
+    post:
+      tags: [Employees]
+      summary: Add a skill association to an employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeSkillCreateRequest' }
+      responses:
+        '201':
+          description: Skill association created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeSkill' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /employees/{employeeId}/skills/{skillId}:
+    parameters:
+      - $ref: '#/components/parameters/EmployeeId'
+      - $ref: '#/components/parameters/SkillId'
+    patch:
+      tags: [Employees]
+      summary: Update an employee's proficiency for a skill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [proficiency]
+              properties:
+                proficiency: { $ref: '#/components/schemas/ProficiencyLevel' }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeSkill' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    delete:
+      tags: [Employees]
+      summary: Remove a skill association from an employee
+      responses:
+        '204': { description: Removed. }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /employees/{employeeId}/my-assignments:
+    parameters:
+      - $ref: '#/components/parameters/EmployeeId'
+    get:
+      tags: [Employees]
+      summary: Employee self-service — own assignments and utilization
+      description: >
+        Used by the Employee role's "My Assignments" view, after the employee has been
+        selected via the role-switcher's employee picker (see BFF Contract Design Rationale).
+        Returns only this employee's own data.
+      responses:
+        '200':
+          description: The employee's current utilization and full assignment history.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyAssignmentsResponse' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /skills:
+    get:
+      tags: [Skills]
+      summary: List the skills catalog
+      responses:
+        '200':
+          description: Full skill catalog.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Skill' }
+    post:
+      tags: [Skills]
+      summary: Create a skill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        '201':
+          description: Skill created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Skill' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: A skill with this name already exists.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error_code: SKILL_NAME_NOT_UNIQUE, message: "A skill with this name already exists." }
+
+  /skills/{skillId}:
+    parameters:
+      - $ref: '#/components/parameters/SkillId'
+    patch:
+      tags: [Skills]
+      summary: Rename a skill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Skill' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409':
+          description: A skill with this name already exists.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    delete:
+      tags: [Skills]
+      summary: Delete a skill
+      description: >
+        Cascades removal of this skill's associations from employees and project roles
+        (per FR-0008). Frontends should call GET .../deletion-impact first to warn the user.
+      responses:
+        '204': { description: Deleted (cascading associations removed). }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /skills/{skillId}/deletion-impact:
+    parameters:
+      - $ref: '#/components/parameters/SkillId'
+    get:
+      tags: [Skills]
+      summary: Preview the impact of deleting a skill
+      description: Side-effect-free (per ADR-0013). Returns counts of affected employees and project roles.
+      responses:
+        '200':
+          description: Impact preview.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SkillDeletionImpact' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /projects:
+    get:
+      tags: [Projects]
+      summary: List projects
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ProjectStatus' }
+        - name: requiredRole
+          in: query
+          schema: { type: string }
+          description: Filter to projects with a required role matching this name.
+        - name: startDateFrom
+          in: query
+          schema: { type: string, format: date }
+        - name: startDateTo
+          in: query
+          schema: { type: string, format: date }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [name, startDate, endDate] }
+          default: name
+        - name: order
+          in: query
+          schema: { type: string, enum: [asc, desc] }
+          default: asc
+      responses:
+        '200':
+          description: List of projects (summary form).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectSummary' }
+    post:
+      tags: [Projects]
+      summary: Create a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectCreateRequest' }
+      responses:
+        '201':
+          description: Project created (status defaults to Draft).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+
+  /projects/{projectId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Projects]
+      summary: Get project detail
+      description: Returns full project detail with embedded required roles.
+      responses:
+        '200':
+          description: Project detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    patch:
+      tags: [Projects]
+      summary: Update project fields, including status
+      description: >
+        Status changes are validated server-side against the transition graph
+        Draft→Active→{Completed,Cancelled}, Draft→Cancelled (no path back from Completed
+        or Cancelled). See BFF Contract Design Rationale.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectUpdateRequest' }
+      responses:
+        '200':
+          description: Project updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409':
+          description: Invalid status transition requested.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error_code: INVALID_STATUS_TRANSITION, message: "Can't move this project from Completed to Active." }
+    delete:
+      tags: [Projects]
+      summary: Delete a project
+      description: Blocked (per FR-0012) if the project has any assignments (past, current, or future).
+      responses:
+        '204': { description: Project deleted. }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409':
+          description: Project has existing assignments; deletion blocked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error_code: PROJECT_HAS_ASSIGNMENTS, message: "Can't delete this project — it has existing assignments." }
+
+  /projects/{projectId}/roles:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      tags: [ProjectRoles]
+      summary: Add a required role to a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectRoleCreateRequest' }
+      responses:
+        '201':
+          description: Role created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectRole' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /projects/{projectId}/roles/{roleId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/RoleId'
+    patch:
+      tags: [ProjectRoles]
+      summary: Edit a required role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectRoleUpdateRequest' }
+      responses:
+        '200':
+          description: Role updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectRole' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    delete:
+      tags: [ProjectRoles]
+      summary: Remove a required role
+      description: Blocked (per FR-0011) if any assignment references this role.
+      responses:
+        '204': { description: Role removed. }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409':
+          description: Role has existing assignments; removal blocked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error_code: ROLE_HAS_ASSIGNMENTS, message: "Can't remove this role — it has existing assignments." }
+
+  /projects/{projectId}/roles/{roleId}/candidates:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/RoleId'
+    get:
+      tags: [ProjectRoles]
+      summary: List candidate employees for a role, with skill-match tier
+      description: >
+        Returns every employee (never filtered) with a server-computed matchTier
+        (FR-0018), for use in the assignment creation/edit form.
+      responses:
+        '200':
+          description: Candidate employees with match tier.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CandidateEmployee' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /assignments:
+    post:
+      tags: [Assignments]
+      summary: Create an assignment
+      description: >
+        Validates: capacity % > 0 and ≤ 100; sum of overlapping-date capacity for the
+        employee ≤ 100% (hard block, FR-0014); target project must be Active (FR-0015).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignmentCreateRequest' }
+      responses:
+        '201':
+          description: Assignment created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Assignment' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409':
+          description: Capacity exceeded or project not Active.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                capacityExceeded:
+                  value: { error_code: CAPACITY_EXCEEDED, message: "This assignment would put the employee at 120% capacity — the maximum is 100%." }
+                projectNotActive:
+                  value: { error_code: PROJECT_NOT_ACTIVE, message: "This project isn't Active — assignments can only be made against Active projects." }
+
+  /assignments/{assignmentId}:
+    parameters:
+      - $ref: '#/components/parameters/AssignmentId'
+    get:
+      tags: [Assignments]
+      summary: Get assignment detail
+      responses:
+        '200':
+          description: Assignment detail.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Assignment' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    patch:
+      tags: [Assignments]
+      summary: Edit an assignment (future-dated only)
+      description: >
+        Permitted only while the assignment's start date is in the future (FR-0016).
+        Re-runs the same capacity validation as creation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignmentUpdateRequest' }
+      responses:
+        '200':
+          description: Assignment updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Assignment' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409':
+          description: Not editable (current/past), capacity exceeded, or project not Active.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                notEditable:
+                  value: { error_code: ASSIGNMENT_NOT_EDITABLE, message: "This assignment has already started and can no longer be edited." }
+                capacityExceeded:
+                  value: { error_code: CAPACITY_EXCEEDED, message: "This edit would put the employee at 110% capacity — the maximum is 100%." }
+    delete:
+      tags: [Assignments]
+      summary: Cancel an assignment (future-dated only)
+      description: >
+        Permitted only while the assignment's start date is in the future (FR-0017).
+        Deleting a current or past assignment is blocked to preserve history.
+      responses:
+        '204': { description: Assignment cancelled. }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409':
+          description: Assignment is current or past; deletion blocked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error_code: ASSIGNMENT_NOT_CANCELLABLE, message: "This assignment has already started and can't be deleted — its history is preserved." }
+
+  /bench:
+    get:
+      tags: [Bench]
+      summary: Bench view — underutilized employees
+      parameters:
+        - name: window
+          in: query
+          required: true
+          schema: { type: string, enum: [now, 30d, 60d, 90d] }
+          description: Fixed preset window (FR-0019/FR-0020) — no arbitrary date range.
+      responses:
+        '200':
+          description: Underutilized employees for the selected window.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BenchEntry' }
+
+  /reports/org:
+    get:
+      tags: [Reports]
+      summary: Generate the org-wide PDF report
+      responses:
+        '200':
+          description: Org-wide allocation/utilization report.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+
+  /reports/employees/{employeeId}:
+    parameters:
+      - $ref: '#/components/parameters/EmployeeId'
+    get:
+      tags: [Reports]
+      summary: Generate the per-employee PDF report
+      responses:
+        '200':
+          description: Per-employee assignment history and utilization report.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /reports/projects/{projectId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Reports]
+      summary: Generate the per-project PDF report
+      responses:
+        '200':
+          description: Per-project staffing report.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+components:
+  parameters:
+    EmployeeId:
+      name: employeeId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SkillId:
+      name: skillId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RoleId:
+      name: roleId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    ValidationError:
+      description: Request failed validation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFoundError:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { error_code: NOT_FOUND, message: "The requested resource does not exist." }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error_code, message]
+      properties:
+        error_code: { type: string, description: "SCREAMING_SNAKE_CASE error code." }
+        message: { type: string, description: "Human-readable description." }
+
+    SeniorityLevel:
+      type: string
+      enum: [Junior, Mid, Senior]
+
+    ProficiencyLevel:
+      type: string
+      enum: [Beginner, Intermediate, Expert]
+
+    ProjectStatus:
+      type: string
+      enum: [Draft, Active, Completed, Cancelled]
+
+    MatchTier:
+      type: string
+      enum: [strong, partial, no_match, no_requirement]
+
+    EmployeeSkill:
+      type: object
+      properties:
+        skillId: { type: string, format: uuid }
+        skillName: { type: string }
+        proficiency: { $ref: '#/components/schemas/ProficiencyLevel' }
+
+    EmployeeSummary:
+      type: object
+      properties:
+        employeeId: { type: string, format: uuid }
+        name: { type: string }
+        seniority: { $ref: '#/components/schemas/SeniorityLevel' }
+        currentUtilizationPercent: { type: integer, minimum: 0, maximum: 100 }
+        currentProjectNames:
+          type: array
+          items: { type: string }
+
+    Employee:
+      type: object
+      properties:
+        employeeId: { type: string, format: uuid }
+        name: { type: string }
+        employmentStartDate: { type: string, format: date }
+        employmentEndDate: { type: string, format: date, nullable: true }
+        seniority: { $ref: '#/components/schemas/SeniorityLevel' }
+        currentUtilizationPercent: { type: integer, minimum: 0, maximum: 100 }
+        skills:
+          type: array
+          items: { $ref: '#/components/schemas/EmployeeSkill' }
+        assignments:
+          type: array
+          items: { $ref: '#/components/schemas/Assignment' }
+
+    EmployeeCreateRequest:
+      type: object
+      required: [name, employmentStartDate, seniority]
+      properties:
+        name: { type: string }
+        employmentStartDate: { type: string, format: date }
+        employmentEndDate: { type: string, format: date, nullable: true }
+        seniority: { $ref: '#/components/schemas/SeniorityLevel' }
+
+    EmployeeUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        employmentStartDate: { type: string, format: date }
+        employmentEndDate: { type: string, format: date, nullable: true }
+        seniority: { $ref: '#/components/schemas/SeniorityLevel' }
+
+    EmployeeSkillCreateRequest:
+      type: object
+      required: [skillId, proficiency]
+      properties:
+        skillId: { type: string, format: uuid }
+        proficiency: { $ref: '#/components/schemas/ProficiencyLevel' }
+
+    MyAssignmentsResponse:
+      type: object
+      properties:
+        employeeId: { type: string, format: uuid }
+        name: { type: string }
+        currentUtilizationPercent: { type: integer, minimum: 0, maximum: 100 }
+        assignments:
+          type: array
+          items: { $ref: '#/components/schemas/Assignment' }
+
+    Skill:
+      type: object
+      properties:
+        skillId: { type: string, format: uuid }
+        name: { type: string }
+
+    SkillDeletionImpact:
+      type: object
+      properties:
+        skillId: { type: string, format: uuid }
+        affectedEmployeeCount: { type: integer }
+        affectedProjectRoleCount: { type: integer }
+
+    ProjectRole:
+      type: object
+      properties:
+        roleId: { type: string, format: uuid }
+        name: { type: string }
+        capacityPercent: { type: integer, minimum: 1, maximum: 100 }
+        requiredSkills:
+          type: array
+          items: { $ref: '#/components/schemas/Skill' }
+
+    ProjectRoleCreateRequest:
+      type: object
+      required: [name, capacityPercent]
+      properties:
+        name: { type: string }
+        capacityPercent: { type: integer, minimum: 1, maximum: 100 }
+        requiredSkillIds:
+          type: array
+          items: { type: string, format: uuid }
+
+    ProjectRoleUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        capacityPercent: { type: integer, minimum: 1, maximum: 100 }
+        requiredSkillIds:
+          type: array
+          items: { type: string, format: uuid }
+
+    ProjectSummary:
+      type: object
+      properties:
+        projectId: { type: string, format: uuid }
+        name: { type: string }
+        status: { $ref: '#/components/schemas/ProjectStatus' }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        requiredRoleCount: { type: integer }
+
+    Project:
+      type: object
+      properties:
+        projectId: { type: string, format: uuid }
+        name: { type: string }
+        status: { $ref: '#/components/schemas/ProjectStatus' }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        requiredRoles:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectRole' }
+
+    ProjectCreateRequest:
+      type: object
+      required: [name, startDate, endDate]
+      properties:
+        name: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+
+    ProjectUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        status: { $ref: '#/components/schemas/ProjectStatus' }
+
+    CandidateEmployee:
+      type: object
+      properties:
+        employeeId: { type: string, format: uuid }
+        name: { type: string }
+        seniority: { $ref: '#/components/schemas/SeniorityLevel' }
+        currentUtilizationPercent: { type: integer, minimum: 0, maximum: 100 }
+        matchTier: { $ref: '#/components/schemas/MatchTier' }
+
+    Assignment:
+      type: object
+      properties:
+        assignmentId: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        employeeName: { type: string }
+        projectId: { type: string, format: uuid }
+        projectName: { type: string }
+        roleId: { type: string, format: uuid }
+        roleName: { type: string }
+        capacityPercent: { type: integer, minimum: 1, maximum: 100 }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        temporalStatus:
+          type: string
+          enum: [future, current, past]
+
+    AssignmentCreateRequest:
+      type: object
+      required: [employeeId, projectId, roleId, capacityPercent, startDate, endDate]
+      properties:
+        employeeId: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        roleId: { type: string, format: uuid }
+        capacityPercent: { type: integer, minimum: 1, maximum: 100 }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+
+    AssignmentUpdateRequest:
+      type: object
+      properties:
+        roleId: { type: string, format: uuid }
+        capacityPercent: { type: integer, minimum: 1, maximum: 100 }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+
+    BenchEntry:
+      type: object
+      properties:
+        employeeId: { type: string, format: uuid }
+        name: { type: string }
+        utilizationPercent: { type: integer, minimum: 0, maximum: 100 }
+        availableCapacityPercent: { type: integer, minimum: 0, maximum: 100 }
+        skills:
+          type: array
+          items: { $ref: '#/components/schemas/EmployeeSkill' }
